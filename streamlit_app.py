@@ -10,8 +10,8 @@ from streamlit_auth import StreamlitAuth
 
 # Configure page
 st.set_page_config(
-    page_title="Orthopedic Competitive Intelligence",
-    page_icon="🦴",
+    page_title="Medical Device Competitive Intelligence",
+    page_icon="🏥",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -110,8 +110,8 @@ def main():
         st.stop()
     
     # Show authenticated content
-    st.title("🦴 Orthopedic Competitive Intelligence")
-    st.markdown("*AI-powered competitive analysis for orthopedic device manufacturers*")
+    st.title("🏥 Medical Device Competitive Intelligence")
+    st.markdown("*AI-powered competitive analysis across 4 medical device categories*")
     
     # Demo info banner
     st.info("🚀 **Demo Version** - This analysis runs entirely in your browser using AI. Results generated in 2-5 minutes.")
@@ -137,9 +137,14 @@ def main():
         st.subheader("🎯 Quick Demo Scenarios")
         
         demo_scenarios = {
-            "Spine Leaders": ["Stryker Spine", "Zimmer Biomet"],
-            "Emerging Players": ["Orthofix", "NuVasive"], 
-            "Full Landscape": ["Stryker Spine", "Zimmer Biomet", "Orthofix"]
+            "🫀 Cardiovascular Leaders": ["Medtronic", "Abbott", "Boston Scientific"],
+            "🫀 Cardiovascular Innovation": ["Edwards Lifesciences", "Biotronik"],
+            "🦴 Spine Fusion Leaders": ["Stryker Spine", "Zimmer Biomet"],
+            "🦴 Spine Emerging Players": ["Orthofix", "NuVasive"],
+            "🦵 Joint Replacement Giants": ["Stryker Ortho", "Smith+Nephew", "DePuy Synthes"],
+            "🦵 Joint Innovation": ["Wright Medical", "Conformis"],
+            "💉 Diabetes Care Leaders": ["Dexcom", "Abbott"],
+            "💉 Diabetes Innovation": ["Medtronic Diabetes", "Tandem", "Insulet"]
         }
         
         selected_demo = st.selectbox("Choose demo scenario:", ["Custom"] + list(demo_scenarios.keys()))
@@ -148,11 +153,14 @@ def main():
             selected_competitors = demo_scenarios[selected_demo]
             st.success(f"Loaded: {selected_demo}")
         else:
-            # Manual selection
-            competitor_options = [
-                "Stryker Spine", "Zimmer Biomet", "Orthofix",
-                "NuVasive", "Medtronic Spine", "DePuy Synthes", "Globus Medical"
-            ]
+            # Manual selection - Group competitors by category for better UX
+            cardiovascular_competitors = ["Medtronic", "Abbott", "Boston Scientific", "Edwards Lifesciences", "Biotronik"]
+            spine_competitors = ["Stryker Spine", "Zimmer Biomet", "Orthofix", "NuVasive", "Medtronic Spine"]
+            joint_competitors = ["Stryker Ortho", "Smith+Nephew", "DePuy Synthes", "Wright Medical", "Conformis"]
+            diabetes_competitors = ["Dexcom", "Abbott", "Medtronic Diabetes", "Tandem", "Insulet"]
+            
+            # Combine all for multiselect
+            competitor_options = cardiovascular_competitors + spine_competitors + joint_competitors + diabetes_competitors
             
             selected_competitors = st.multiselect(
                 "Select competitors to analyze:",
@@ -167,6 +175,22 @@ def main():
             options=["spine_fusion", "joint_replacement", "trauma"],
             index=0
         )
+        
+        # Show detected category if competitors selected
+        if selected_competitors:
+            from data_models import CategoryRouter
+            router = CategoryRouter()
+            detected_category = router.detect_category(selected_competitors, "")
+            
+            category_display = {
+                "cardiovascular": "🫀 Cardiovascular",
+                "spine_fusion": "🦴 Spine Fusion", 
+                "joint_replacement": "🦵 Joint Replacement",
+                "diabetes_care": "💉 Diabetes Care"
+            }
+            
+            st.info(f"🎯 **Detected Category:** {category_display.get(detected_category, detected_category)}")
+            st.session_state['detected_category'] = detected_category
     
     # Main content
     if not selected_competitors:
@@ -184,14 +208,24 @@ def main():
     
     with col2:
         st.write(f"**Focus Area:** {focus_area.replace('_', ' ').title()}")
-        st.write(f"**Analysis Type:** Direct AI Analysis")
+        if 'detected_category' in st.session_state:
+            category = st.session_state['detected_category']
+            category_display = {
+                "cardiovascular": "🫀 Cardiovascular",
+                "spine_fusion": "🦴 Spine Fusion", 
+                "joint_replacement": "🦵 Joint Replacement",
+                "diabetes_care": "💉 Diabetes Care"
+            }
+            st.write(f"**Device Category:** {category_display.get(category, category)}")
+        st.write(f"**Analysis Type:** Multi-Category AI Analysis")
     
     # Value proposition
     with st.expander("💡 What This Analysis Provides"):
+        st.write("• **Multi-Category Support**: Analyze competitors across 4 medical device categories")
+        st.write("• **Market Opportunities**: Unmet needs, technology gaps, positioning opportunities (shown first)")
         st.write("• **Clinical Gaps**: Regulatory issues, device limitations, surgeon feedback")
-        st.write("• **Market Opportunities**: Unmet needs, technology gaps, positioning opportunities")
         st.write("• **Evidence-Based**: All insights backed by web research and citations")
-        st.write("• **Actionable**: Ready for product strategy and competitive positioning")
+        st.write("• **Auto-Detection**: Category automatically detected from selected competitors")
     
     # Run analysis
     if st.button("🚀 Start Competitive Analysis", type="primary", use_container_width=True):
@@ -235,13 +269,13 @@ def main():
             st.metric("Market Opportunities", len(result.get('market_opportunities', [])))
         
         # Detailed results
-        tab1, tab2, tab3 = st.tabs(["🔬 Clinical Gaps", "💡 Opportunities", "📄 Raw Data"])
+        tab1, tab2, tab3 = st.tabs(["💡 Market Opportunities", "🔬 Clinical Gaps", "📄 Raw Data"])
         
         with tab1:
-            display_clinical_gaps(result.get('clinical_gaps', []))
+            display_market_opportunities(result.get('market_opportunities', []))
         
         with tab2:
-            display_market_opportunities(result.get('market_opportunities', []))
+            display_clinical_gaps(result.get('clinical_gaps', []))
         
         with tab3:
             st.subheader("Raw Analysis Data")
