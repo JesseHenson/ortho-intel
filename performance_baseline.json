@@ -1,0 +1,18 @@
+{
+  "Search Template Generation": {
+    "competitor_query_time_ms": 0.0005412101745605469,
+    "market_query_time_ms": 0.0002574920654296875
+  },
+  "Analysis Processor": {
+    "gap_extraction_time_ms": 0.19669532775878906,
+    "opportunity_extraction_time_ms": 0.0400543212890625,
+    "gaps_found": 50,
+    "opportunities_found": 0
+  },
+  "Graph Initialization": {
+    "graph_init_time_ms": 471.4968204498291
+  },
+  "Memory Usage": {
+    "memory_benchmark": "skipped"
+  }
+}
