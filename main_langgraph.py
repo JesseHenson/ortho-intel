@@ -20,7 +20,8 @@ from data_models import (
     AnalysisProcessor,
     ClinicalGap,
     MarketOpportunity,
-    Config
+    Config,
+    CategoryRouter
 )
 
 # Initialize tools and LLM
@@ -48,6 +49,7 @@ class OrthopedicIntelligenceGraph:
         workflow = StateGraph(GraphState)
         
         # Add nodes
+        workflow.add_node("detect_category", self.detect_category)
         workflow.add_node("initialize", self.initialize_research)
         workflow.add_node("research_competitor", self.research_competitor)
         workflow.add_node("analyze_gaps", self.analyze_gaps)
@@ -55,26 +57,44 @@ class OrthopedicIntelligenceGraph:
         workflow.add_node("synthesize_report", self.synthesize_report)
         
         # Set entry point
-        workflow.set_entry_point("initialize")
+        workflow.set_entry_point("detect_category")
         
         # Compile and return
         return workflow.compile()
+    
+    def detect_category(self, state: GraphState) -> Command[Literal["initialize"]]:
+        """Detect device category based on competitors and context"""
+        competitors = state["competitors"]
+        focus_area = state["focus_area"]
+        
+        # Detect category using CategoryRouter
+        detected_category = CategoryRouter.detect_category(competitors, focus_area)
+        
+        print(f"🎯 Category detected: {detected_category}")
+        print(f"   Competitors: {competitors}")
+        print(f"   Context: {focus_area}")
+        
+        return Command(
+            update={"device_category": detected_category},
+            goto="initialize"
+        )
     
     def initialize_research(self, state: GraphState) -> Command[Literal["research_competitor"]]:
         """Initialize the research process"""
         competitors = state["competitors"]
         focus_area = state["focus_area"]
+        device_category = state["device_category"]
         
-        print(f"🔍 Starting analysis for {len(competitors)} competitors in {focus_area}")
+        print(f"🔍 Starting analysis for {len(competitors)} competitors in {device_category}")
         
-        # Generate search queries
+        # Generate search queries using detected category
         all_queries = []
         for competitor in competitors:
-            competitor_queries = SearchTemplates.get_competitor_queries(competitor, focus_area)
+            competitor_queries = SearchTemplates.get_competitor_queries(competitor, focus_area, device_category)
             all_queries.extend(competitor_queries)
         
         # Add market-level queries
-        market_queries = SearchTemplates.get_market_queries(focus_area)
+        market_queries = SearchTemplates.get_market_queries(focus_area, device_category)
         all_queries.extend(market_queries)
         
         return Command(
@@ -100,11 +120,17 @@ class OrthopedicIntelligenceGraph:
         print(f"📊 Researching {current_competitor} (iteration {iteration + 1})")
         
         try:
-            # Generate competitor-specific query
-            if iteration < len(SearchTemplates.get_competitor_queries(current_competitor, state["focus_area"])):
-                query = SearchTemplates.get_competitor_queries(current_competitor, state["focus_area"])[iteration]
+            # Generate competitor-specific query using detected category
+            device_category = state["device_category"]
+            competitor_queries = SearchTemplates.get_competitor_queries(current_competitor, state["focus_area"], device_category)
+            
+            if iteration < len(competitor_queries):
+                query = competitor_queries[iteration]
             else:
-                query = f"{current_competitor} spine fusion clinical issues 2024"
+                # Fallback query based on category
+                category_info = CategoryRouter.get_category_info(device_category)
+                primary_keyword = category_info["keywords"][0] if category_info["keywords"] else "medical device"
+                query = f"{current_competitor} {primary_keyword} clinical issues 2024"
             
             print(f"   Query: {query}")
             
@@ -346,6 +372,7 @@ class OrthopedicIntelligenceGraph:
         initial_state = {
             "competitors": competitors,
             "focus_area": focus_area,
+            "device_category": "",  # Will be auto-detected
             "search_queries": [],
             "raw_research_results": [],
             "clinical_gaps": [],
