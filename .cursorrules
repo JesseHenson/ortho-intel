@@ -1,0 +1,20 @@
+# Orthopedic Intelligence Project Rules
+
+## Context
+This is an orthopedic competitive intelligence project targeting marketing firms.
+Always read CURSOR_CONTEXT.md first for complete background.
+
+## Code Patterns  
+- Use LangGraph Command pattern: Command(update={}, goto="next_node")
+- Include error handling that continues with partial results
+- Add evidence citations to all analysis outputs
+- Follow test-driven development with test_dataset.py
+
+## Target Users
+Marketing professionals - prioritize clear UI and business value messaging.
+
+## Current Phase
+Deployment phase - focus on getting working demo deployed quickly.
+
+## Test Data
+Use established test competitors: Stryker Spine, Zimmer Biomet, Orthofix
