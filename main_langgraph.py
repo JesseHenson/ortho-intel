@@ -53,6 +53,7 @@ class OrthopedicIntelligenceGraph:
         workflow.add_node("initialize", self.initialize_research)
         workflow.add_node("research_competitor", self.research_competitor)
         workflow.add_node("analyze_gaps", self.analyze_gaps)
+        workflow.add_node("market_share_analysis", self.market_share_analysis)  # NEW: Market intelligence
         workflow.add_node("identify_opportunities", self.identify_opportunities)
         workflow.add_node("synthesize_report", self.synthesize_report)
         
@@ -200,7 +201,7 @@ class OrthopedicIntelligenceGraph:
                 goto="research_competitor"
             )
     
-    def analyze_gaps(self, state: GraphState) -> Command[Literal["identify_opportunities"]]:
+    def analyze_gaps(self, state: GraphState) -> Command[Literal["market_share_analysis"]]:
         """Analyze research results to identify clinical gaps"""
         print("🔬 Analyzing clinical gaps...")
         
@@ -255,6 +256,92 @@ class OrthopedicIntelligenceGraph:
         
         return Command(
             update={"clinical_gaps": [gap.model_dump() for gap in all_gaps]},
+            goto="market_share_analysis"
+        )
+    
+    def market_share_analysis(self, state: GraphState) -> Command[Literal["identify_opportunities"]]:
+        """NEW: Analyze market share and positioning insights"""
+        print("📈 Analyzing market share and positioning...")
+        
+        raw_results = state["raw_research_results"]
+        competitors = state["competitors"]
+        device_category = state["device_category"]
+        all_insights = []
+        
+        for competitor in competitors:
+            # Filter results for this competitor
+            competitor_results = [r for r in raw_results if r.get("competitor") == competitor]
+            
+            if competitor_results:
+                try:
+                    # Prepare content for market share analysis
+                    content_summary = "\n".join([
+                        f"- {r.get('title', '')}: {r.get('content', '')[:200]}..."
+                        for r in competitor_results[:3]
+                    ])
+                    
+                    market_analysis_prompt = f"""
+                    Analyze this research about {competitor} in {device_category} for market positioning and share insights:
+                    
+                    {content_summary}
+                    
+                    Extract specific information about:
+                    1. Market position (leader/challenger/follower/niche)
+                    2. Estimated market share or revenue indicators
+                    3. Growth trends (growing/stable/declining)
+                    4. Key geographic or segment markets
+                    
+                    Provide factual, evidence-based insights. If specific data isn't available, indicate "Not specified" rather than guessing.
+                    Format as structured bullet points.
+                    """
+                    
+                    response = llm.invoke(market_analysis_prompt)
+                    
+                    if response.content and len(response.content) > 50:
+                        # Parse the response to extract structured data
+                        content = response.content
+                        
+                        # Extract market position
+                        market_position = "Not specified"
+                        if "leader" in content.lower():
+                            market_position = "Market Leader"
+                        elif "challenger" in content.lower():
+                            market_position = "Challenger"
+                        elif "follower" in content.lower():
+                            market_position = "Follower"
+                        elif "niche" in content.lower():
+                            market_position = "Niche Player"
+                        
+                        # Extract growth trend
+                        growth_trend = "Not specified"
+                        if "growing" in content.lower() or "growth" in content.lower():
+                            growth_trend = "Growing"
+                        elif "declining" in content.lower() or "decline" in content.lower():
+                            growth_trend = "Declining"
+                        elif "stable" in content.lower():
+                            growth_trend = "Stable"
+                        
+                        # Create market share insight
+                        from data_models import MarketShareInsight
+                        insight = MarketShareInsight(
+                            competitor=competitor,
+                            market_position=market_position,
+                            estimated_market_share="Analysis-based",
+                            revenue_estimate="Not specified",
+                            growth_trend=growth_trend,
+                            key_markets=["Analysis-based"],
+                            evidence=content[:500],
+                            source_url=competitor_results[0].get("url") if competitor_results else None
+                        )
+                        all_insights.append(insight)
+                        
+                except Exception as e:
+                    print(f"   ⚠️ Market share analysis failed for {competitor}: {str(e)}")
+        
+        print(f"   Generated {len(all_insights)} market share insights")
+        
+        return Command(
+            update={"market_share_insights": [insight.model_dump() for insight in all_insights]},
             goto="identify_opportunities"
         )
     
@@ -319,22 +406,31 @@ class OrthopedicIntelligenceGraph:
         competitors = state["competitors"]
         gaps = state["clinical_gaps"]
         opportunities = state["market_opportunities"]
+        # NEW: Market intelligence data
+        market_insights = state["market_share_insights"]
+        brand_positioning = state["brand_positioning"]
+        feature_gaps = state["product_feature_gaps"]
+        competitive_landscape = state["competitive_landscape"]
         
         # Generate executive summary
         try:
             summary_prompt = f"""
             Create an executive summary for a competitive intelligence report on {', '.join(competitors)} 
-            in orthopedic spine fusion devices.
+            in {state.get('device_category', 'medical devices')}.
             
             Key findings:
             - {len(gaps)} clinical gaps identified
             - {len(opportunities)} market opportunities found
+            - {len(market_insights)} market share insights generated
+            - Brand positioning analysis: {'completed' if brand_positioning else 'pending'}
             
-            Gaps: {gaps[:2] if gaps else 'None identified'}
-            Opportunities: {opportunities[:2] if opportunities else 'None identified'}
+            Clinical Gaps: {gaps[:1] if gaps else 'None identified'}
+            Market Opportunities: {opportunities[:1] if opportunities else 'None identified'}
+            Market Insights: {market_insights[:1] if market_insights else 'None identified'}
             
             Write a 2-3 sentence executive summary for marketing professionals.
             Focus on actionable insights for product positioning and market strategy.
+            Include both clinical and market intelligence findings.
             """
             
             response = llm.invoke(summary_prompt)
@@ -349,6 +445,11 @@ class OrthopedicIntelligenceGraph:
             "competitors_analyzed": competitors,
             "clinical_gaps": gaps,
             "market_opportunities": opportunities,
+            # NEW: Market intelligence results
+            "market_share_insights": market_insights,
+            "brand_positioning": brand_positioning,
+            "product_feature_gaps": feature_gaps,
+            "competitive_landscape": competitive_landscape,
             "summary": summary,
             "research_timestamp": "2025-05-25",  # Could use datetime.now()
             "total_sources_analyzed": len(state["raw_research_results"]),
@@ -359,7 +460,7 @@ class OrthopedicIntelligenceGraph:
             }
         }
         
-        print(f"✅ Report generated: {len(gaps)} gaps, {len(opportunities)} opportunities")
+        print(f"✅ Report generated: {len(gaps)} gaps, {len(opportunities)} opportunities, {len(market_insights)} market insights")
         
         return Command(
             update={"final_report": final_report},
@@ -377,6 +478,11 @@ class OrthopedicIntelligenceGraph:
             "raw_research_results": [],
             "clinical_gaps": [],
             "market_opportunities": [],
+            # NEW: Market intelligence fields
+            "market_share_insights": [],
+            "brand_positioning": [],
+            "product_feature_gaps": [],
+            "competitive_landscape": None,
             "final_report": None,
             "current_competitor": None,
             "research_iteration": 0,

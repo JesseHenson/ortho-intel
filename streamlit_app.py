@@ -102,6 +102,132 @@ def display_market_opportunities(opportunities):
             
             st.write(f"**Market Landscape:** {opp.get('competitive_landscape', 'Unknown')}")
 
+def display_market_share_insights(insights):
+    """Display market share insights - NEW"""
+    if not insights:
+        st.info("No market share insights available in this analysis.")
+        return
+    
+    st.subheader(f"📈 Market Share Analysis ({len(insights)})")
+    
+    for i, insight in enumerate(insights, 1):
+        competitor = insight.get('competitor', 'Unknown')
+        market_position = insight.get('market_position', 'Unknown')
+        
+        # Color code market position
+        position_color = {
+            'Leader': '🟢',
+            'Challenger': '🟡', 
+            'Follower': '🟠',
+            'Niche': '🔵'
+        }.get(market_position, '⚪')
+        
+        with st.expander(f"{position_color} {competitor} - {market_position}"):
+            col1, col2 = st.columns([2, 1])
+            
+            with col1:
+                if insight.get('estimated_market_share'):
+                    st.metric("Market Share", insight.get('estimated_market_share'))
+                
+                if insight.get('revenue_estimate'):
+                    st.write(f"**Revenue Estimate:** {insight.get('revenue_estimate')}")
+                
+                if insight.get('growth_trend'):
+                    trend_emoji = {'Increasing': '📈', 'Stable': '➡️', 'Declining': '📉'}.get(insight.get('growth_trend'), '📊')
+                    st.write(f"**Growth Trend:** {trend_emoji} {insight.get('growth_trend')}")
+                
+                if insight.get('key_markets'):
+                    st.write(f"**Key Markets:** {', '.join(insight.get('key_markets', []))}")
+            
+            with col2:
+                st.write("**Evidence:**")
+                st.write(insight.get('evidence', 'No evidence available'))
+                
+                if insight.get('source_url'):
+                    st.markdown(f"[📎 View Source]({insight.get('source_url')})")
+
+def display_brand_positioning(positioning):
+    """Display brand positioning analysis - NEW"""
+    if not positioning:
+        st.info("No brand positioning analysis available.")
+        return
+    
+    st.subheader(f"🎯 Brand Positioning Analysis ({len(positioning)})")
+    
+    for i, brand in enumerate(positioning, 1):
+        competitor = brand.get('competitor', 'Unknown')
+        
+        with st.expander(f"🏷️ {competitor} Brand Analysis"):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.write("**Brand Message:**")
+                st.write(brand.get('brand_message', 'Not identified'))
+                
+                if brand.get('target_segments'):
+                    st.write("**Target Segments:**")
+                    for segment in brand.get('target_segments', []):
+                        st.write(f"• {segment}")
+                
+                if brand.get('differentiation_factors'):
+                    st.write("**Differentiation Factors:**")
+                    for factor in brand.get('differentiation_factors', []):
+                        st.write(f"• {factor}")
+            
+            with col2:
+                if brand.get('brand_strengths'):
+                    st.write("**Brand Strengths:**")
+                    for strength in brand.get('brand_strengths', []):
+                        st.write(f"✅ {strength}")
+                
+                if brand.get('brand_weaknesses'):
+                    st.write("**Brand Weaknesses:**")
+                    for weakness in brand.get('brand_weaknesses', []):
+                        st.write(f"❌ {weakness}")
+                
+                if brand.get('source_url'):
+                    st.markdown(f"[📎 View Source]({brand.get('source_url')})")
+
+def display_product_feature_gaps(gaps):
+    """Display product feature gap analysis - NEW"""
+    if not gaps:
+        st.info("No product feature gap analysis available.")
+        return
+    
+    st.subheader(f"⚙️ Product Feature Analysis ({len(gaps)})")
+    
+    for i, gap in enumerate(gaps, 1):
+        competitor = gap.get('competitor', 'Unknown')
+        category = gap.get('product_category', 'Unknown')
+        
+        with st.expander(f"🔧 {competitor} - {category} Features"):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                if gap.get('competitor_advantages'):
+                    st.write("**Competitive Advantages:**")
+                    for advantage in gap.get('competitor_advantages', []):
+                        st.write(f"🟢 {advantage}")
+                
+                if gap.get('feature_comparison'):
+                    st.write("**Feature Comparison:**")
+                    for feature, rating in gap.get('feature_comparison', {}).items():
+                        st.write(f"• **{feature}:** {rating}")
+            
+            with col2:
+                if gap.get('competitor_gaps'):
+                    st.write("**Identified Gaps:**")
+                    for gap_item in gap.get('competitor_gaps', []):
+                        st.write(f"🔴 {gap_item}")
+                
+                if gap.get('innovation_areas'):
+                    st.write("**Innovation Opportunities:**")
+                    for area in gap.get('innovation_areas', []):
+                        st.write(f"💡 {area}")
+                
+                if gap.get('source_url'):
+                    st.markdown(f"[📎 View Source]({gap.get('source_url')})")
+
 def main():
     """Main Streamlit application with authentication"""
     
@@ -219,11 +345,12 @@ def main():
             st.write(f"**Device Category:** {category_display.get(category, category)}")
         st.write(f"**Analysis Type:** Multi-Category AI Analysis")
     
-    # Value proposition
+    # Value proposition - Updated for market intelligence focus
     with st.expander("💡 What This Analysis Provides"):
+        st.write("• **Market Intelligence**: Market share analysis, brand positioning, and competitive landscape insights")
         st.write("• **Multi-Category Support**: Analyze competitors across 4 medical device categories")
-        st.write("• **Market Opportunities**: Unmet needs, technology gaps, positioning opportunities (shown first)")
-        st.write("• **Clinical Gaps**: Regulatory issues, device limitations, surgeon feedback")
+        st.write("• **Strategic Insights**: Market opportunities, positioning gaps, and competitive advantages")
+        st.write("• **Clinical Analysis**: Regulatory issues, device limitations, and clinical gaps")
         st.write("• **Evidence-Based**: All insights backed by web research and citations")
         st.write("• **Auto-Detection**: Category automatically detected from selected competitors")
     
@@ -259,25 +386,39 @@ def main():
         summary = result.get('summary', 'Analysis completed with findings below.')
         st.write(summary)
         
-        # Metrics
-        col1, col2, col3 = st.columns(3)
+        # Metrics - Updated to include market intelligence
+        col1, col2, col3, col4 = st.columns(4)
         with col1:
             st.metric("Competitors Analyzed", len(result.get('competitors_analyzed', [])))
         with col2:
             st.metric("Clinical Gaps", len(result.get('clinical_gaps', [])))
         with col3:
             st.metric("Market Opportunities", len(result.get('market_opportunities', [])))
+        with col4:
+            st.metric("Market Insights", len(result.get('market_share_insights', [])))
         
-        # Detailed results
-        tab1, tab2, tab3 = st.tabs(["💡 Market Opportunities", "🔬 Clinical Gaps", "📄 Raw Data"])
+        # Detailed results - Updated with market intelligence tabs
+        tab1, tab2, tab3, tab4, tab5 = st.tabs([
+            "📈 Market Share", 
+            "🎯 Brand Positioning", 
+            "💡 Market Opportunities", 
+            "🔬 Clinical Gaps", 
+            "📄 Raw Data"
+        ])
         
         with tab1:
-            display_market_opportunities(result.get('market_opportunities', []))
+            display_market_share_insights(result.get('market_share_insights', []))
         
         with tab2:
-            display_clinical_gaps(result.get('clinical_gaps', []))
+            display_brand_positioning(result.get('brand_positioning', []))
         
         with tab3:
+            display_market_opportunities(result.get('market_opportunities', []))
+        
+        with tab4:
+            display_clinical_gaps(result.get('clinical_gaps', []))
+        
+        with tab5:
             st.subheader("Raw Analysis Data")
             st.json(result)
         
