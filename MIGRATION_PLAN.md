@@ -19,11 +19,10 @@ LangGraph Pipeline (6 nodes):
   2. initialize_research → Setup search queries  
   3. research_competitor → Web research via Tavily
   4. analyze_gaps → Find clinical gaps/FDA issues
-  5. market_share_analysis → NEW: Market positioning (recently added)
+  5. market_share_analysis → NEW: Market positioning insights
   6. identify_opportunities → Market opportunities
-  7. synthesize_report → Final report
   ↓
-Output: Clinical gaps + Market opportunities + Market insights
+Output: Clinical gaps + Market opportunities + Market share insights
 ```
 
 ### **Current Data Models**
@@ -62,17 +61,16 @@ Streamlit App (5 tabs):
 ```
 Input: Competitors + Focus Area
   ↓
-LangGraph Pipeline (Enhanced):
+Enhanced LangGraph Pipeline (7 nodes):
   1. detect_category → Auto-detect device category
-  2. initialize_research → Setup opportunity-focused queries
-  3. research_competitor → Web research for market intelligence
-  4. analyze_market_opportunities → PRIMARY: Find revenue opportunities
-  5. analyze_brand_positioning → Brand gaps and positioning opportunities  
-  6. analyze_product_gaps → Product feature opportunities
-  7. analyze_competitive_landscape → Market dynamics and threats
-  8. synthesize_opportunities → Opportunity-first final report
+  2. initialize_research → Setup search queries
+  3. research_competitor → Web research via Tavily
+  4. analyze_competitive_gaps → Find ALL gaps (clinical, market, product, brand)
+  5. generate_opportunities → Transform gaps into ranked opportunities
+  6. categorize_opportunities → Brand, Product, Pricing, Market categories
+  7. synthesize_opportunity_report → Executive summary + action plan
   ↓
-Output: TOP OPPORTUNITIES + Supporting market intelligence + Clinical context
+Output: TOP OPPORTUNITIES + Opportunity Matrix + Category Opportunities + Executive Summary
 ```
 
 ### **Target Data Flow**
@@ -184,6 +182,26 @@ test_data_compatibility.py          # Data model compatibility
 - `data_transformers.py` (new utility functions)
 
 **Validation**: All existing tests pass + new opportunity data tests pass
+
+**New Data Models Created:**
+```python
+# Core opportunity models
+StrategicOpportunity      # Top-level opportunities with scoring
+OpportunityMatrix         # Impact vs difficulty matrix
+CategoryOpportunity       # Brand/Product/Pricing/Market opportunities
+CompetitorProfile         # Enhanced competitor analysis
+ExecutiveSummary          # Executive summary and recommendations
+
+# Transformation utilities
+OpportunityTransformer    # Convert clinical gaps → opportunities
+OpportunityRanker         # Rank and prioritize opportunities
+```
+
+**Integration Strategy:**
+- New models complement existing clinical models
+- Transformation utilities bridge clinical → opportunity data
+- Enhanced GraphState maintains backward compatibility
+- Legacy fields preserved for gradual migration
 
 ---
 

@@ -144,6 +144,16 @@ class GraphState(TypedDict):
     product_feature_gaps: List[Dict[str, Any]]
     competitive_landscape: Optional[Dict[str, Any]]
     
+    # NEW: Opportunity-first analysis results
+    all_opportunities: List[Dict[str, Any]]
+    top_opportunities: List[Dict[str, Any]]
+    brand_opportunities: List[Dict[str, Any]]
+    product_opportunities: List[Dict[str, Any]]
+    pricing_opportunities: List[Dict[str, Any]]
+    market_expansion_opportunities: List[Dict[str, Any]]
+    executive_summary: Optional[Dict[str, Any]]
+    competitive_profiles: Optional[Dict[str, Any]]
+    
     # Final output
     final_report: Optional[Dict[str, Any]]
     
