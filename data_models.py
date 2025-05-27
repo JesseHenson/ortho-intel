@@ -134,9 +134,25 @@ class GraphState(TypedDict):
     search_queries: List[str]
     raw_research_results: List[Dict[str, Any]]
     
-    # Analysis results
+    # Analysis results (existing)
     clinical_gaps: List[Dict[str, Any]]
     market_opportunities: List[Dict[str, Any]]
+    
+    # NEW: Market intelligence analysis results
+    market_share_insights: List[Dict[str, Any]]
+    brand_positioning: List[Dict[str, Any]]
+    product_feature_gaps: List[Dict[str, Any]]
+    competitive_landscape: Optional[Dict[str, Any]]
+    
+    # NEW: Opportunity-first analysis results
+    all_opportunities: List[Dict[str, Any]]
+    top_opportunities: List[Dict[str, Any]]
+    brand_opportunities: List[Dict[str, Any]]
+    product_opportunities: List[Dict[str, Any]]
+    pricing_opportunities: List[Dict[str, Any]]
+    market_expansion_opportunities: List[Dict[str, Any]]
+    executive_summary: Optional[Dict[str, Any]]
+    competitive_profiles: Optional[Dict[str, Any]]
     
     # Final output
     final_report: Optional[Dict[str, Any]]
@@ -177,6 +193,52 @@ class MarketOpportunity(BaseModel):
     evidence: str = Field(description="Supporting evidence")
     source_url: Optional[str] = Field(description="Source URL for evidence")
 
+# NEW MARKET INTELLIGENCE MODELS
+class MarketShareInsight(BaseModel):
+    """Model for market share and positioning insights"""
+    competitor: str = Field(description="Competitor company name")
+    market_position: str = Field(description="Market position (leader, challenger, follower, niche)")
+    estimated_market_share: Optional[str] = Field(description="Estimated market share percentage or range")
+    revenue_estimate: Optional[str] = Field(description="Revenue estimates or indicators")
+    growth_trend: str = Field(description="Growth trend (growing, stable, declining)")
+    key_markets: List[str] = Field(description="Key geographic or segment markets")
+    evidence: str = Field(description="Supporting evidence from research")
+    source_url: Optional[str] = Field(description="Source URL for evidence")
+
+class BrandPositioning(BaseModel):
+    """Model for brand positioning analysis"""
+    competitor: str = Field(description="Competitor company name")
+    brand_message: str = Field(description="Primary brand messaging or value proposition")
+    target_segments: List[str] = Field(description="Target customer segments")
+    differentiation_factors: List[str] = Field(description="Key differentiation factors")
+    brand_strengths: List[str] = Field(description="Identified brand strengths")
+    brand_weaknesses: List[str] = Field(description="Identified brand weaknesses")
+    evidence: str = Field(description="Supporting evidence from research")
+    source_url: Optional[str] = Field(description="Source URL for evidence")
+
+class ProductFeatureGap(BaseModel):
+    """Model for product feature gap analysis"""
+    competitor: str = Field(description="Competitor company name")
+    product_category: str = Field(description="Product category being analyzed")
+    competitor_advantages: List[str] = Field(description="Features where competitor has advantage")
+    competitor_gaps: List[str] = Field(description="Features where competitor has gaps")
+    feature_comparison: Dict[str, str] = Field(description="Feature-by-feature comparison")
+    innovation_areas: List[str] = Field(description="Areas of recent innovation")
+    evidence: str = Field(description="Supporting evidence from research")
+    source_url: Optional[str] = Field(description="Source URL for evidence")
+
+class CompetitiveLandscape(BaseModel):
+    """Model for competitive landscape analysis"""
+    market_overview: str = Field(description="Overall market landscape description")
+    key_players: List[str] = Field(description="Key players in the market")
+    market_dynamics: str = Field(description="Current market dynamics and trends")
+    competitive_intensity: str = Field(description="Level of competitive intensity")
+    barriers_to_entry: List[str] = Field(description="Barriers to entry in the market")
+    opportunities: List[str] = Field(description="Strategic opportunities identified")
+    threats: List[str] = Field(description="Competitive threats identified")
+    evidence: str = Field(description="Supporting evidence from research")
+    source_urls: List[str] = Field(description="Source URLs for evidence")
+
 class CompetitorProfile(BaseModel):
     """Profile of a single competitor"""
     name: str
@@ -187,8 +249,17 @@ class CompetitorProfile(BaseModel):
 class CompetitorAnalysisResponse(BaseModel):
     """Response model for competitor analysis API"""
     competitors_analyzed: List[str]
+    
+    # Existing analysis results
     clinical_gaps: List[ClinicalGap] = Field(description="Identified clinical gaps")
     market_opportunities: List[MarketOpportunity] = Field(description="Identified opportunities")
+    
+    # NEW: Market intelligence results
+    market_share_insights: List[MarketShareInsight] = Field(default=[], description="Market share and positioning insights")
+    brand_positioning: List[BrandPositioning] = Field(default=[], description="Brand positioning analysis")
+    product_feature_gaps: List[ProductFeatureGap] = Field(default=[], description="Product feature gap analysis")
+    competitive_landscape: Optional[CompetitiveLandscape] = Field(default=None, description="Competitive landscape overview")
+    
     summary: str = Field(description="Executive summary of findings")
     research_timestamp: str = Field(description="When the analysis was performed")
     
