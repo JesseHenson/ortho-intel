@@ -25,3 +25,4 @@ typing-extensions>=4.8.0
 # Development and testing
 pytest>=7.4.0
 pytest-asyncio>=0.21.0
+plotly>=5.19.0
