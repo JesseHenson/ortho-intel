@@ -1,0 +1,71 @@
+# Medical Device Intelligence Platform Enhancement PRD
+
+## Project Overview
+Transform the current orthopedic-focused competitive intelligence platform into a comprehensive medical device manufacturing intelligence platform with enhanced source transparency and drill-down capabilities.
+
+## Current State
+- Platform currently branded as "orthopedic intelligence"
+- Successfully analyzes competitors across multiple medical device categories (cardiovascular, diabetes care, joint replacement, spine)
+- Generates 15-20 strategic opportunities per analysis
+- Uses Tavily for research but sources are not visible to end users
+- Deployed locally, needs production deployment capability
+
+## Enhancement Goals
+
+### 1. Medical Device Manufacturing Rebranding
+**Objective**: Rebrand from orthopedic-specific to comprehensive medical device manufacturing platform
+
+**Requirements**:
+- Update all UI text, titles, and branding from "orthopedic" to "medical device manufacturing"
+- Modify welcome messages and descriptions to reflect broader scope
+- Update example companies to showcase variety across device categories
+- Ensure branding appeals to marketing firms serving diverse medical device clients
+- Maintain professional, executive-ready appearance
+
+### 2. Source Detail Drill-Down Feature
+**Objective**: Provide transparency and credibility by allowing users to examine the research sources behind opportunities
+
+**Requirements**:
+- Display source URLs and titles for each opportunity generated
+- Allow users to click through to original Tavily research results
+- Show research confidence scores and source quality indicators
+- Provide expandable sections for detailed source information
+- Maintain clean UI while adding source transparency
+- Enable users to validate and verify opportunity recommendations
+
+### 3. Production Deployment Preparation
+**Objective**: Prepare platform for production deployment and external user access
+
+**Requirements**:
+- Ensure proper branch management (avoid pushing to main)
+- Create deployment-ready configuration
+- Test all features work in production environment
+- Verify external access capabilities
+- Document deployment process
+
+## Target Users
+- Marketing firms serving medical device manufacturers
+- Strategy consultants in healthcare/medical device space
+- Business development teams at medical device companies
+- Competitive intelligence professionals
+
+## Success Criteria
+- Platform successfully rebranded to medical device manufacturing focus
+- Users can drill down into source details for any opportunity
+- Platform ready for external user access and demo
+- All existing functionality preserved during enhancements
+- Professional appearance maintained throughout
+
+## Technical Considerations
+- Maintain existing LangGraph backend functionality
+- Preserve opportunity generation quality and speed
+- Ensure source data is properly captured and stored
+- Implement clean UI patterns for source detail display
+- Test across all medical device categories
+
+## Timeline
+- Phase 1: Planning and task creation
+- Phase 2: Rebranding implementation
+- Phase 3: Source drill-down feature development
+- Phase 4: Production deployment preparation
+- Phase 5: Testing and validation 
