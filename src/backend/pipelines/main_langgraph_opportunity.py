@@ -15,7 +15,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 load_dotenv()
 
-from data_models import (
+from ..core.data_models import (
     GraphState, 
     SearchTemplates, 
     AnalysisProcessor,
@@ -25,7 +25,7 @@ from data_models import (
     CategoryRouter
 )
 
-from opportunity_data_models import (
+from ..core.opportunity_data_models import (
     StrategicOpportunity,
     OpportunityCategory,
     ImplementationDifficulty,
@@ -301,7 +301,7 @@ class OpportunityIntelligenceGraph:
                         all_gaps.append(clinical_gap)
                         
                         # Extract market insights
-                        from data_models import MarketShareInsight
+                        from ..core.data_models import MarketShareInsight
                         market_insight = MarketShareInsight(
                             competitor=competitor,
                             market_position="Analysis-based",
@@ -807,7 +807,7 @@ class OpportunityIntelligenceGraph:
     
     def _create_opportunity_matrix(self, strategic_opportunities: List[StrategicOpportunity]):
         """Create opportunity matrix from strategic opportunities"""
-        from opportunity_data_models import OpportunityMatrix
+        from ..core.opportunity_data_models import OpportunityMatrix
         
         matrix_data = {
             "high_impact_easy": [],

@@ -15,7 +15,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 load_dotenv()
 
-from data_models import (
+from ..core.data_models import (
     GraphState, 
     SearchTemplates, 
     AnalysisProcessor,
@@ -25,7 +25,7 @@ from data_models import (
     CategoryRouter
 )
 
-from opportunity_data_models import (
+from ..core.opportunity_data_models import (
     StrategicOpportunity,
     OpportunityCategory,
     ImplementationDifficulty,

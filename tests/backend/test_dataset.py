@@ -3,7 +3,7 @@
 Test data for validating the orthopedic competitive intelligence prototype
 """
 
-from data_models import CompetitorAnalysisRequest, ClinicalGap, MarketOpportunity
+from ...src.backend.core.data_models import CompetitorAnalysisRequest, ClinicalGap, MarketOpportunity
 
 # Test Input Data
 TEST_COMPETITORS = [

@@ -6,7 +6,7 @@ Integration test script to validate the complete system
 import requests
 import time
 import os
-from test_dataset import get_test_request, TestRunner
+from .test_dataset import get_test_request, TestRunner
 
 def test_api_health():
     """Test if API is running and healthy"""

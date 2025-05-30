@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from data_models import (
+from ..core.data_models import (
     GraphState, 
     SearchTemplates, 
     AnalysisProcessor,
