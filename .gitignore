@@ -28,4 +28,71 @@ node_modules/
 
 # Task files
 tasks.json
-tasks/ 
+tasks/
+
+# Development Artifacts (Added during cleanup)
+# Debug files
+debug_*.py
+debug_*.json
+*_debug.*
+debug/
+
+# Backup files
+*_BACKUP.*
+*_backup.*
+*.backup
+backup_*
+rollback_*
+
+# Temporary files
+*.tmp
+*.temp
+temp_*
+temporary_*
+
+# Test artifacts
+test_output/
+test_results/
+coverage/
+.coverage
+.pytest_cache/
+
+# Development logs
+dev.log
+development.log
+*.dev.log
+
+# Cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# IDE and editor files
+*.swp
+*.swo
+*~
+.vscode/settings.json
+.idea/
+
+# Documentation drafts
+*_DRAFT.*
+*_draft.*
+draft_*
+
+# Legacy files
+*_legacy.*
+legacy_*
+*_old.*
+old_*
+
+# Analysis artifacts
+analysis_*.json
+*_analysis.*
+performance_*.json 
