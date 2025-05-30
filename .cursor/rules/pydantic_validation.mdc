@@ -3,3 +3,138 @@ description:
 globs:
 alwaysApply: false
 ---
+# Pydantic Validation Rules
+
+## **Required Field Validation**
+- **Always include all required fields** when creating Pydantic model instances
+- **Check model definitions** for required fields before instantiation
+- **Use model validation tests** to catch missing field errors early
+
+## **Model Creation Patterns**
+
+### ✅ DO: Include All Required Fields
+```python
+# Check the model definition first
+class CategoryOpportunity(ProgressiveDisclosureModel):
+    id: Union[int, str] = Field(description="Unique identifier")  # REQUIRED
+    opportunity: str = Field(description="Opportunity name")      # REQUIRED
+    category_type: str = Field(description="Category type")       # REQUIRED
+    # ... other fields
+
+# Create with all required fields
+category_opp = CategoryOpportunity(
+    id=1,
+    opportunity="Test Opportunity",
+    category_type="brand",
+    current_gap="Test gap",
+    recommendation="Test recommendation",
+    implementation="Test implementation",
+    timeline="Test timeline",
+    investment="Test investment"
+)
+```
+
+### ❌ DON'T: Create Models Without Required Fields
+```python
+# This will cause ValidationError
+category_opp = CategoryOpportunity(
+    opportunity="Test Opportunity",
+    current_gap="Test gap",
+    # Missing: id and category_type (required fields)
+)
+```
+
+## **Round-Trip Conversion Testing**
+- **Always test model_dump() and recreation** for models used in state management
+- **Validate that dict conversion preserves all required fields**
+
+### ✅ DO: Test Round-Trip Conversion
+```python
+def test_model_round_trip():
+    # Create model
+    original = CategoryOpportunity(id=1, opportunity="Test", category_type="test", ...)
+    
+    # Convert to dict (simulating state storage)
+    model_dict = original.model_dump()
+    
+    # Recreate from dict (simulating retrieval)
+    recreated = CategoryOpportunity(**model_dict)
+    
+    # Verify key fields match
+    assert recreated.id == original.id
+    assert recreated.category_type == original.category_type
+```
+
+## **Pipeline Model Creation**
+- **Use consistent ID schemes** for different model types
+- **Include category_type or similar discriminator fields** for polymorphic models
+- **Validate models immediately after creation** in pipeline methods
+
+### ✅ DO: Consistent Pipeline Model Creation
+```python
+def _generate_brand_opportunities(self, competitors, device_category):
+    opportunities = [
+        CategoryOpportunity(
+            id=1001,  # Use consistent ID ranges (1000s for brand)
+            opportunity="Brand Opportunity",
+            category_type="brand",  # Always include discriminator
+            # ... other required fields
+        )
+    ]
+    return opportunities
+```
+
+## **Error Prevention Strategies**
+
+### **1. Model Definition Review**
+- **Check for required fields** (no default values) before using models
+- **Document required vs optional fields** in model docstrings
+- **Use type hints consistently** for Union types and optional fields
+
+### **2. Validation Testing**
+- **Create unit tests** for each model with missing field scenarios
+- **Test pipeline methods** that create models from dictionaries
+- **Include round-trip conversion tests** in test suites
+
+### **3. Development Workflow**
+- **Run validation tests** before committing model changes
+- **Test with actual pipeline data** not just mock data
+- **Validate error messages** provide clear field information
+
+## **Common Validation Errors**
+
+### **Missing Required Fields**
+```python
+# Error: Field required [type=missing, input_value={...}, input_type=dict]
+# Solution: Add all required fields to model creation
+```
+
+### **Type Mismatches**
+```python
+# Error: Input should be a valid integer [type=int_parsing, input_value='string', input_type=str]
+# Solution: Ensure correct types for all fields
+```
+
+### **Invalid Enum Values**
+```python
+# Error: Input should be 'value1', 'value2' or 'value3' [type=enum, input_value='invalid']
+# Solution: Use valid enum values from model definition
+```
+
+## **Testing Requirements**
+- **Every Pydantic model** must have validation tests
+- **Pipeline methods creating models** must have integration tests
+- **Round-trip conversion** must be tested for state-managed models
+- **Error scenarios** must be tested with pytest.raises(ValidationError)
+
+## **Model Documentation**
+- **Document all required fields** in model docstrings
+- **Provide usage examples** showing proper instantiation
+- **Include validation error examples** in documentation
+- **Cross-reference related models** and transformation utilities
+
+## **Integration with Task Master**
+- **Add validation tests** as subtasks when creating new models
+- **Include "test model validation"** in implementation details
+- **Update existing tests** when modifying model requirements
+- **Document validation fixes** in task completion notes
