@@ -6,7 +6,7 @@ import streamlit as st
 import requests
 import json
 import time
-from streamlit_auth import StreamlitAuth
+from .auth.streamlit_auth import StreamlitAuth
 
 # Configure page
 st.set_page_config(
@@ -26,7 +26,7 @@ def run_local_analysis(competitors, focus_area):
     """
     try:
         # Import our LangGraph directly
-        from main_langgraph import intelligence_graph
+        from ..backend.pipelines.main_langgraph import intelligence_graph
         
         with st.spinner("Running competitive analysis... This may take 2-5 minutes."):
             progress_bar = st.progress(0)
