@@ -1,5 +1,281 @@
 ---
-description:
-globs:
-alwaysApply: false
+description: 
+globs: 
+alwaysApply: true
 ---
+# Backend Organization Guidelines
+
+## **Directory Structure**
+
+### **Core Module (`src/backend/core/`)**
+- **Data Models**: All Pydantic models and data structures
+  - `data_models.py`: Legacy clinical analysis models
+  - `opportunity_data_models.py`: Opportunity-focused models
+  - `source_models.py`: Source citation and metadata models
+  - `streaming_models.py`: Real-time streaming data models
+- **Business Logic**: Core business logic and transformations
+- **Validators**: Data validation utilities
+
+### **API Module (`src/backend/api/`)**
+- **Endpoints**: FastAPI route definitions
+  - `opportunities.py`: Opportunity analysis endpoints
+  - `streaming.py`: Real-time streaming endpoints
+  - `sources.py`: Source detail endpoints
+- **Dependencies**: FastAPI dependency injection
+- **Middleware**: Request/response middleware
+
+### **Pipelines Module (`src/backend/pipelines/`)**
+- **LangGraph Workflows**: Graph-based processing pipelines
+- **Node Definitions**: Individual processing nodes
+- **State Management**: Graph state models and utilities
+
+### **Utils Module (`src/backend/utils/`)**
+- **Helpers**: Utility functions and common operations
+- **Integrations**: External service integrations (Tavily, AI providers)
+- **Transformers**: Data transformation utilities
+
+## **File Naming Conventions**
+
+### **Data Models**
+```python
+# ✅ DO: Use descriptive, domain-specific names
+opportunity_data_models.py
+source_citation_models.py
+streaming_response_models.py
+
+# ❌ DON'T: Use generic names
+models.py
+data.py
+types.py
+```
+
+### **API Endpoints**
+```python
+# ✅ DO: Group by feature/domain
+api/opportunities.py
+api/streaming.py
+api/sources.py
+
+# ❌ DON'T: Single monolithic file
+api/endpoints.py
+api/routes.py
+```
+
+### **Pipeline Components**
+```python
+# ✅ DO: Descriptive pipeline names
+pipelines/opportunity_analysis_pipeline.py
+pipelines/streaming_analysis_pipeline.py
+
+# ❌ DON'T: Generic pipeline names
+pipelines/main.py
+pipelines/processor.py
+```
+
+## **Model Organization Patterns**
+
+### **Progressive Disclosure Models**
+- **Summary Models**: Basic information for list views
+- **Detail Models**: Extended information for detail views
+- **Full Models**: Complete data including sources and metadata
+
+```python
+# ✅ DO: Create tiered models
+class OpportunitySummary(BaseModel):
+    id: int
+    title: str
+    category: str
+    score: float
+
+class OpportunityDetail(OpportunitySummary):
+    description: str
+    implementation_difficulty: str
+    next_steps: List[str]
+
+class OpportunityFull(OpportunityDetail):
+    sources: List[SourceCitation]
+    detailed_analysis: str
+    metadata: Dict[str, Any]
+```
+
+### **Source Citation Integration**
+- **All models must include source tracking**
+- **Credibility scoring for sources**
+- **Timestamp and provenance tracking**
+
+```python
+# ✅ DO: Include source metadata
+class SourceCitation(BaseModel):
+    url: str
+    title: str
+    credibility_score: float
+    retrieved_at: datetime
+    content_snippet: str
+    relevance_score: float
+```
+
+## **Import Organization**
+
+### **Standard Import Order**
+```python
+# ✅ DO: Follow this import order
+# 1. Standard library
+from typing import List, Dict, Optional
+from datetime import datetime
+from enum import Enum
+
+# 2. Third-party packages
+from pydantic import BaseModel, Field
+from fastapi import APIRouter
+
+# 3. Local imports - core first
+from src.backend.core.data_models import BaseAnalysisModel
+from src.backend.core.opportunity_data_models import StrategicOpportunity
+
+# 4. Local imports - other modules
+from src.backend.utils.transformers import DataTransformer
+```
+
+### **Relative Import Guidelines**
+```python
+# ✅ DO: Use absolute imports from src
+from src.backend.core.opportunity_data_models import StrategicOpportunity
+
+# ❌ DON'T: Use relative imports across modules
+from ..core.opportunity_data_models import StrategicOpportunity
+```
+
+## **Model Enhancement Patterns**
+
+### **Backward Compatibility**
+- **Always maintain existing model fields**
+- **Add new fields as Optional with defaults**
+- **Use model versioning for breaking changes**
+
+```python
+# ✅ DO: Extend models safely
+class EnhancedOpportunity(StrategicOpportunity):
+    # New fields for progressive disclosure
+    detailed_analysis: Optional[str] = None
+    source_citations: List[SourceCitation] = Field(default_factory=list)
+    credibility_metadata: Optional[Dict[str, Any]] = None
+```
+
+### **Streaming Model Patterns**
+- **Event-based models for real-time updates**
+- **Progress tracking models**
+- **Error handling models**
+
+```python
+# ✅ DO: Create streaming-specific models
+class StreamingEvent(BaseModel):
+    event_type: str
+    timestamp: datetime
+    data: Dict[str, Any]
+    progress_percentage: Optional[float] = None
+```
+
+## **Testing Organization**
+
+### **Test File Structure**
+```
+tests/
+├── backend/
+│   ├── core/
+│   │   ├── test_opportunity_models.py
+│   │   └── test_source_models.py
+│   ├── api/
+│   │   ├── test_opportunity_endpoints.py
+│   │   └── test_streaming_endpoints.py
+│   └── pipelines/
+│       └── test_analysis_pipeline.py
+```
+
+### **Model Testing Patterns**
+```python
+# ✅ DO: Test model validation and serialization
+def test_opportunity_model_validation():
+    # Test required fields
+    # Test field constraints
+    # Test serialization/deserialization
+    pass
+
+def test_progressive_disclosure_models():
+    # Test model inheritance
+    # Test optional field handling
+    # Test backward compatibility
+    pass
+```
+
+## **Documentation Requirements**
+
+### **Model Documentation**
+- **All models must have comprehensive docstrings**
+- **Field descriptions must be business-focused**
+- **Include usage examples**
+
+```python
+# ✅ DO: Comprehensive model documentation
+class StrategicOpportunity(BaseModel):
+    """
+    Strategic opportunity model for competitive intelligence analysis.
+    
+    Represents a business opportunity identified through competitive analysis,
+    including implementation details, risk assessment, and source citations.
+    
+    Used in:
+    - Opportunity dashboard displays
+    - Progressive disclosure interfaces
+    - Executive reporting
+    
+    Example:
+        opportunity = StrategicOpportunity(
+            title="Market Expansion in Cardiovascular Devices",
+            category=OpportunityCategory.MARKET_EXPANSION,
+            opportunity_score=8.5
+        )
+    """
+```
+
+## **Performance Considerations**
+
+### **Model Optimization**
+- **Use Field validators for complex validation**
+- **Implement lazy loading for large datasets**
+- **Consider model caching for frequently accessed data**
+
+```python
+# ✅ DO: Optimize model performance
+class OptimizedOpportunity(BaseModel):
+    # Use computed fields for expensive operations
+    @computed_field
+    @property
+    def composite_score(self) -> float:
+        return self._calculate_composite_score()
+    
+    # Use validators for complex validation
+    @field_validator('opportunity_score')
+    def validate_score(cls, v):
+        if not 1 <= v <= 10:
+            raise ValueError('Score must be between 1 and 10')
+        return v
+```
+
+## **Security Guidelines**
+
+### **Data Sanitization**
+- **Sanitize all external data inputs**
+- **Validate source URLs and content**
+- **Implement rate limiting for API endpoints**
+
+### **Sensitive Data Handling**
+- **Never log sensitive client information**
+- **Use environment variables for API keys**
+- **Implement proper error handling without data leakage**
+
+---
+
+**Related Rules:**
+- [progressive_disclosure.mdc](mdc:.cursor/rules/progressive_disclosure.mdc) - UI progressive disclosure patterns
+- [streaming_architecture.mdc](mdc:.cursor/rules/streaming_architecture.mdc) - Real-time streaming guidelines
+- [taskmaster.mdc](mdc:.cursor/rules/taskmaster.mdc) - Development workflow

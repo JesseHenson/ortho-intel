@@ -40,6 +40,9 @@ from ..core.opportunity_data_models import (
     enhance_graph_state_with_opportunities
 )
 
+from ..core.source_models import AnalysisMetadata
+from ..core.opportunity_data_models import OpportunityDisclosureTransformer
+
 # Initialize tools and LLM
 tavily_tool = TavilySearchResults(
     max_results=Config.TAVILY_MAX_RESULTS,
@@ -384,17 +387,20 @@ class OpportunityIntelligenceGraph:
         market_expansion_opportunities = []
         
         # Categorize existing opportunities
+        opportunity_id_counter = 1
         for opp_dict in all_opportunities:
             category = opp_dict.get("category", "")
             
-            # Create CategoryOpportunity from StrategicOpportunity
+            # Create CategoryOpportunity from StrategicOpportunity with required fields
             category_opp = CategoryOpportunity(
+                id=opportunity_id_counter,
                 opportunity=opp_dict.get("title", ""),
                 current_gap=f"Competitive gap in {category.lower()}",
                 recommendation=opp_dict.get("description", ""),
                 implementation="; ".join(opp_dict.get("next_steps", [])),
                 timeline=opp_dict.get("time_to_market", "6-12 months"),
-                investment=f"{opp_dict.get('investment_level', 'Medium')} investment required"
+                investment=f"{opp_dict.get('investment_level', 'Medium')} investment required",
+                category_type=category.replace(" ", "_").lower()  # Convert to snake_case
             )
             
             if category == "Brand Strategy":
@@ -405,6 +411,8 @@ class OpportunityIntelligenceGraph:
                 pricing_opportunities.append(category_opp)
             elif category == "Market Positioning" or category == "Market Expansion":
                 market_expansion_opportunities.append(category_opp)
+            
+            opportunity_id_counter += 1
         
         # Generate additional category-specific opportunities using AI
         brand_opportunities.extend(self._generate_brand_opportunities(competitors, device_category))
@@ -446,15 +454,28 @@ class OpportunityIntelligenceGraph:
         opportunity_matrix = self._create_opportunity_matrix(strategic_opportunities)
         
         # Create final opportunity analysis response
+        # Create proper analysis metadata
+        analysis_metadata = AnalysisMetadata(
+            analysis_id=f"opportunity_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+            analysis_type="Competitive Opportunity Intelligence",
+            pipeline_version="1.0.0",
+            primary_model="gpt-4",
+            started_at=datetime.now(),
+            confidence_score=8.0,
+            completeness_score=8.5,
+            source_coverage=7.5,
+            client_name="Analysis Client"
+        )
+        
+        # Convert strategic opportunities to summary format for progressive disclosure
+        top_opportunities_summary = [
+            OpportunityDisclosureTransformer.strategic_to_summary(opp) 
+            for opp in strategic_opportunities
+        ]
+        
         analysis_response = OpportunityAnalysisResponse(
-            analysis_metadata={
-                "client_company": "Analysis Client",
-                "analysis_date": datetime.now().strftime("%Y-%m-%d"),
-                "competitors_analyzed": competitors,
-                "device_category": device_category,
-                "analysis_type": "Competitive Opportunity Intelligence"
-            },
-            top_opportunities=strategic_opportunities,
+            analysis_metadata=analysis_metadata,
+            top_opportunities_summary=top_opportunities_summary,
             opportunity_matrix=opportunity_matrix,
             brand_opportunities=[CategoryOpportunity(**opp) for opp in state.get("brand_opportunities", [])],
             product_opportunities=[CategoryOpportunity(**opp) for opp in state.get("product_opportunities", [])],
@@ -629,22 +650,26 @@ class OpportunityIntelligenceGraph:
         
         opportunities = [
             CategoryOpportunity(
+                id=1001,  # Use high IDs to distinguish from converted opportunities
                 opportunity="Outcome-Focused Brand Positioning",
                 current_gap=f"Competitors in {device_category} focus on device features rather than patient outcomes",
                 recommendation="Position brand around measurable patient outcomes and clinical results",
                 implementation="Develop outcome-focused marketing campaigns, create real-world evidence studies, train sales team on outcome messaging",
                 timeline="3-6 months",
                 investment="Medium ($100K-300K)",
+                category_type="brand",
                 competitive_advantage="First-mover advantage in outcome-based messaging",
                 success_metrics=["Brand awareness increase", "Physician preference scores", "Message recall rates"]
             ),
             CategoryOpportunity(
+                id=1002,
                 opportunity="Digital Thought Leadership",
                 current_gap=f"Limited digital presence and thought leadership in {device_category} space",
                 recommendation="Establish digital thought leadership through educational content and KOL partnerships",
                 implementation="Create educational webinar series, develop clinical podcasts, partner with key opinion leaders",
                 timeline="4-8 months",
                 investment="Medium ($150K-400K)",
+                category_type="brand",
                 competitive_advantage="Enhanced physician engagement and brand credibility",
                 success_metrics=["Digital engagement rates", "KOL partnership growth", "Educational content reach"]
             )
@@ -659,32 +684,38 @@ class OpportunityIntelligenceGraph:
         
         opportunities = [
             CategoryOpportunity(
+                id=2001,  # Use high IDs to distinguish from converted opportunities
                 opportunity="AI-Powered Surgical Planning Platform",
                 current_gap=f"Competitors in {device_category} lack integrated AI-powered surgical planning tools",
                 recommendation="Develop AI-enabled surgical planning platform with predictive analytics",
                 implementation="Partner with AI/ML company, develop algorithm, integrate with existing devices, conduct clinical validation",
                 timeline="12-18 months",
                 investment="High ($2M-5M)",
+                category_type="product",
                 competitive_advantage="First-to-market AI integration providing superior surgical outcomes",
                 success_metrics=["Surgical outcome improvements", "Surgeon adoption rates", "Time-to-surgery reduction"]
             ),
             CategoryOpportunity(
+                id=2002,
                 opportunity="Minimally Invasive Technology Enhancement",
                 current_gap=f"Limited innovation in minimally invasive approaches for {primary_keyword}",
                 recommendation="Develop next-generation minimally invasive surgical tools and techniques",
                 implementation="R&D investment in micro-instrumentation, surgeon training programs, clinical studies",
                 timeline="18-24 months",
                 investment="High ($3M-7M)",
+                category_type="product",
                 competitive_advantage="Superior patient outcomes with reduced recovery time",
                 success_metrics=["Procedure time reduction", "Patient recovery metrics", "Surgeon preference scores"]
             ),
             CategoryOpportunity(
+                id=2003,
                 opportunity="Smart Device Connectivity",
                 current_gap=f"Lack of IoT connectivity and real-time monitoring in {device_category} devices",
                 recommendation="Integrate IoT sensors and real-time monitoring capabilities",
                 implementation="Develop sensor technology, create mobile app, establish data analytics platform",
                 timeline="9-15 months",
                 investment="Medium ($800K-2M)",
+                category_type="product",
                 competitive_advantage="Enhanced patient monitoring and predictive maintenance",
                 success_metrics=["Device uptime improvement", "Patient monitoring accuracy", "Predictive maintenance effectiveness"]
             )
@@ -696,32 +727,38 @@ class OpportunityIntelligenceGraph:
         """Generate pricing strategy opportunities based on market analysis"""
         opportunities = [
             CategoryOpportunity(
+                id=3001,  # Use high IDs to distinguish from converted opportunities
                 opportunity="Value-Based Pricing Model",
                 current_gap=f"Competitors in {device_category} use traditional fee-for-service pricing without outcome accountability",
                 recommendation="Implement outcome-based pricing with shared risk/reward models",
                 implementation="Develop outcome tracking systems, pilot with progressive health systems, create risk-sharing contracts",
                 timeline="6-12 months",
                 investment="Medium ($300K-800K)",
+                category_type="pricing",
                 competitive_advantage="Alignment with healthcare value-based care trends",
                 success_metrics=["Contract conversion rates", "Outcome improvement metrics", "Customer satisfaction scores"]
             ),
             CategoryOpportunity(
+                id=3002,
                 opportunity="Bundled Solution Pricing",
                 current_gap=f"Fragmented pricing across {device_category} ecosystem with separate device, service, and training costs",
                 recommendation="Create comprehensive bundled pricing for device + services + training + support",
                 implementation="Develop service packages, create training programs, establish support infrastructure",
                 timeline="4-8 months",
                 investment="Medium ($200K-600K)",
+                category_type="pricing",
                 competitive_advantage="Simplified procurement and predictable costs for customers",
                 success_metrics=["Bundle adoption rates", "Customer lifetime value", "Competitive win rates"]
             ),
             CategoryOpportunity(
+                id=3003,
                 opportunity="Subscription-Based Service Model",
                 current_gap=f"Traditional one-time purchase model in {device_category} doesn't align with ongoing value delivery",
                 recommendation="Develop subscription model for device access, maintenance, and upgrades",
                 implementation="Create subscription tiers, develop service delivery model, establish upgrade pathways",
                 timeline="8-12 months",
                 investment="High ($500K-1.5M)",
+                category_type="pricing",
                 competitive_advantage="Recurring revenue model with enhanced customer relationships",
                 success_metrics=["Subscription adoption rates", "Monthly recurring revenue", "Customer retention rates"]
             )
@@ -735,32 +772,38 @@ class OpportunityIntelligenceGraph:
         
         opportunities = [
             CategoryOpportunity(
+                id=4001,  # Use high IDs to distinguish from converted opportunities
                 opportunity="Ambulatory Surgery Center Expansion",
                 current_gap=f"Competitors in {device_category} primarily focus on hospital markets, underserving growing ASC segment",
                 recommendation="Develop ASC-specific product lines and comprehensive support programs",
                 implementation="Create ASC sales team, develop ASC-optimized products, establish training programs, build ASC partnerships",
                 timeline="6-12 months",
                 investment="Medium ($400K-1M)",
+                category_type="market",
                 competitive_advantage="First-mover advantage in rapidly growing ASC market segment",
                 success_metrics=["ASC market penetration", "ASC revenue growth", "ASC customer satisfaction"]
             ),
             CategoryOpportunity(
+                id=4002,
                 opportunity="International Market Penetration",
                 current_gap=f"Limited international presence in emerging markets for {device_category} compared to competitors",
                 recommendation="Establish strategic partnerships and distribution networks in high-growth international markets",
                 implementation="Identify key markets, establish local partnerships, adapt products for regulatory requirements, build distribution network",
                 timeline="12-18 months",
                 investment="High ($1M-3M)",
+                category_type="market",
                 competitive_advantage="Early market entry in high-growth regions",
                 success_metrics=["International revenue growth", "Market share in target countries", "Regulatory approvals obtained"]
             ),
             CategoryOpportunity(
+                id=4003,
                 opportunity="Specialty Practice Segment Focus",
                 current_gap=f"Competitors treat all {device_category} customers similarly without specialty-specific solutions",
                 recommendation="Develop specialty-specific product variants and support programs for niche practice areas",
                 implementation="Identify high-value specialty segments, develop specialized products, create specialty sales teams, build KOL relationships",
                 timeline="8-15 months",
                 investment="Medium ($600K-1.5M)",
+                category_type="market",
                 competitive_advantage="Deep specialization and customer intimacy in high-value segments",
                 success_metrics=["Specialty segment market share", "Specialty customer loyalty", "Premium pricing achievement"]
             )
