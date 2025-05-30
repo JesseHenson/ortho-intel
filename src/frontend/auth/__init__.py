@@ -1,3 +1,5 @@
 """
-Frontend Authentication - User authentication and session management
-""" 
+Frontend Authentication - User authentication and authorization components
+"""
+
+from .streamlit_auth import * 

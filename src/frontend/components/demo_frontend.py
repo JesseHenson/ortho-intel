@@ -1,8 +1,7 @@
 """
-Opportunity-First Competitive Intelligence Demo Frontend - DARK MODE FIXED
+Opportunity-First Competitive Intelligence Demo Frontend
 Designed for medical device manufacturing companies
 Focus: Immediate visibility of actionable opportunities
-FIXED: Dark mode compatibility for quick wins and strategic investments
 """
 
 import streamlit as st
@@ -10,7 +9,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import pandas as pd
-from demo_data import get_demo_data, DEMO_SCENARIOS
+from ...backend.utils.demo_data import get_demo_data, DEMO_SCENARIOS
 
 # Configure page for executive presentation
 st.set_page_config(
@@ -20,17 +19,18 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# FIXED CSS for both light and dark mode compatibility
+# Custom CSS for professional look
 st.markdown("""
 <style>
     .main-header {
         font-size: 2.5rem;
         font-weight: 700;
+        color: #1f2937;
         margin-bottom: 0.5rem;
     }
     .sub-header {
         font-size: 1.2rem;
-        opacity: 0.7;
+        color: #6b7280;
         margin-bottom: 2rem;
     }
     .opportunity-card {
@@ -41,62 +41,35 @@ st.markdown("""
         margin-bottom: 1rem;
     }
     .metric-card {
+        background: #f8fafc;
         padding: 1rem;
         border-radius: 8px;
         border-left: 4px solid #3b82f6;
-        background: var(--background-color);
-        border: 1px solid rgba(128, 128, 128, 0.2);
     }
-    
-    /* FIXED: Dark mode compatible quick wins */
     .quick-win {
-        padding: 1rem;
-        border-radius: 8px;
+        background: #ecfdf5;
         border-left: 4px solid #10b981;
-        /* Use semi-transparent green that works in both modes */
-        background: rgba(16, 185, 129, 0.1);
-        border: 1px solid rgba(16, 185, 129, 0.3);
-        /* Ensure text is visible in both modes */
-        color: inherit;
-    }
-    
-    /* FIXED: Dark mode compatible strategic investments */
-    .high-impact {
         padding: 1rem;
         border-radius: 8px;
-        border-left: 4px solid #f59e0b;
-        /* Use semi-transparent orange that works in both modes */
-        background: rgba(245, 158, 11, 0.1);
-        border: 1px solid rgba(245, 158, 11, 0.3);
-        /* Ensure text is visible in both modes */
-        color: inherit;
     }
-    
+    .high-impact {
+        background: #fef3c7;
+        border-left: 4px solid #f59e0b;
+        padding: 1rem;
+        border-radius: 8px;
+    }
     .action-item {
+        background: #eff6ff;
         padding: 0.75rem;
         border-radius: 6px;
         margin: 0.5rem 0;
         border-left: 3px solid #3b82f6;
-        background: rgba(59, 130, 246, 0.1);
-        border: 1px solid rgba(59, 130, 246, 0.3);
-        color: inherit;
-    }
-    
-    /* Additional dark mode improvements */
-    .stApp {
-        /* Ensure smooth transitions between themes */
-        transition: all 0.3s ease;
-    }
-    
-    /* Make sure headers are visible in both modes */
-    h1, h2, h3, h4, h5, h6 {
-        color: inherit !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
 def create_opportunity_matrix(matrix_data):
-    """Create interactive opportunity matrix visualization with dark mode support"""
+    """Create interactive opportunity matrix visualization"""
     
     # Prepare data for plotting
     all_opportunities = []
@@ -149,20 +122,18 @@ def create_opportunity_matrix(matrix_data):
                 hovertemplate='<b>%{text}</b><br>Impact: %{y}<br>Difficulty: %{x}<extra></extra>'
             ))
     
-    # FIXED: Make plot background transparent to inherit theme
     fig.update_layout(
         title="Opportunity Impact vs Implementation Difficulty",
         xaxis_title="Implementation Difficulty (1-10)",
         yaxis_title="Business Impact (1-10)",
         height=500,
         showlegend=True,
-        plot_bgcolor='rgba(0,0,0,0)',  # Transparent background
-        paper_bgcolor='rgba(0,0,0,0)',  # Transparent paper
-        xaxis=dict(range=[0, 10], gridcolor='rgba(128,128,128,0.2)'),
-        yaxis=dict(range=[0, 10], gridcolor='rgba(128,128,128,0.2)')
+        plot_bgcolor='white',
+        xaxis=dict(range=[0, 10], gridcolor='#f1f5f9'),
+        yaxis=dict(range=[0, 10], gridcolor='#f1f5f9')
     )
     
-    # Add quadrant labels with better contrast
+    # Add quadrant labels
     fig.add_annotation(x=2.5, y=8.5, text="🎯 Quick Wins", showarrow=False, 
                       font=dict(size=14, color='#10b981'))
     fig.add_annotation(x=7.5, y=8.5, text="🚀 Strategic Investments", showarrow=False,
@@ -247,7 +218,7 @@ def main():
     
     # Header section
     st.markdown('<h1 class="main-header">🎯 Competitive Opportunity Intelligence</h1>', unsafe_allow_html=True)
-    st.markdown('<p class="sub-header">Actionable insights for medical device manufacturers • Demo Version • Dark Mode Fixed</p>', unsafe_allow_html=True)
+    st.markdown('<p class="sub-header">Actionable insights for medical device manufacturers • Demo Version</p>', unsafe_allow_html=True)
     
     # Demo scenario selector
     col1, col2, col3 = st.columns([2, 1, 1])
@@ -326,7 +297,7 @@ def main():
     matrix_fig = create_opportunity_matrix(data['opportunity_matrix'])
     st.plotly_chart(matrix_fig, use_container_width=True)
     
-    # FIXED: Quick interpretation with dark mode support
+    # Quick interpretation
     col1, col2 = st.columns(2)
     with col1:
         st.markdown("""

@@ -9,9 +9,9 @@ import sys
 def test_imports():
     """Test that all core modules can be imported"""
     try:
-        from ...src.backend.pipelines.main_langgraph import intelligence_graph
-        from ...src.backend.core.data_models import GraphState, SearchTemplates, AnalysisProcessor
-        from .test_dataset import get_test_request
+        from src.backend.pipelines.main_langgraph import intelligence_graph
+        from src.backend.core.data_models import GraphState, SearchTemplates, AnalysisProcessor
+        from tests.backend.test_dataset import get_test_request
         print("✅ All core modules imported successfully")
         return True
     except Exception as e:
@@ -21,8 +21,8 @@ def test_imports():
 def test_data_models():
     """Test data model functionality"""
     try:
-        from ...src.backend.core.data_models import SearchTemplates
-        from .test_dataset import get_test_request
+        from src.backend.core.data_models import SearchTemplates
+        from tests.backend.test_dataset import get_test_request
         
         test_req = get_test_request()
         queries = SearchTemplates.get_competitor_queries(
@@ -40,7 +40,7 @@ def test_data_models():
 def test_graph_initialization():
     """Test LangGraph initialization"""
     try:
-        from ...src.backend.pipelines.main_langgraph import intelligence_graph
+        from src.backend.pipelines.main_langgraph import intelligence_graph
         
         # Just test that the graph exists and has the expected structure
         assert intelligence_graph is not None, "Intelligence graph not initialized"

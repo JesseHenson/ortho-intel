@@ -6,8 +6,8 @@ Allows seamless switching between demo data and live analysis
 
 import streamlit as st
 from typing import Dict, Any, Optional
-from demo_data import get_demo_data, DEMO_SCENARIOS
-from main_langgraph_opportunity import opportunity_graph
+from ...backend.utils.demo_data import get_demo_data, DEMO_SCENARIOS
+from ...backend.pipelines.main_langgraph_opportunity import opportunity_graph
 
 class DemoFrontendAdapter:
     """Adapter to make demo frontend work with current opportunity pipeline"""
