@@ -1,3 +1,5 @@
 """
-Backend API Components - External service integrations and API handlers
-""" 
+Backend API Components - FastAPI server and API endpoints
+"""
+
+from .fastapi_server import * 
