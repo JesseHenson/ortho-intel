@@ -22,6 +22,12 @@ from ..core.opportunity_data_models import (
 )
 from ..core.source_models import DetailLevel, SourceAnalysisResult
 
+# Import additional models for enhanced endpoints
+from ..core.source_models import (
+    ComprehensiveAnalysisMetadata, LangGraphNodeExecution, AnalysisMethodology,
+    TavilySourceMetadata, SourceCollectionAnalyzer
+)
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -623,6 +629,515 @@ async def get_opportunity_sources(
         raise
     except Exception as e:
         logger.error(f"Failed to get opportunity sources for {analysis_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/opportunities/{analysis_id}/methodology")
+async def get_analysis_methodology(analysis_id: str):
+    """
+    Get comprehensive analysis methodology including LangGraph execution details,
+    reasoning chains, and decision audit trail for complete transparency.
+    """
+    if analysis_id not in analysis_cache:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+    
+    try:
+        result = analysis_cache[analysis_id]
+        
+        # Extract comprehensive methodology from final report
+        if "final_report" in result:
+            report_data = result["final_report"]
+            
+            # Get comprehensive methodology if available
+            comprehensive_methodology = report_data.get("comprehensive_methodology")
+            methodology_transparency = report_data.get("methodology_transparency_report")
+            
+            if comprehensive_methodology:
+                return {
+                    "analysis_id": analysis_id,
+                    "methodology": comprehensive_methodology.get("methodology", {}),
+                    "node_executions": comprehensive_methodology.get("node_executions", []),
+                    "reasoning_chains": comprehensive_methodology.get("reasoning_chains", []),
+                    "decision_audit_trail": comprehensive_methodology.get("decision_audit_trail", []),
+                    "execution_summary": {
+                        "total_nodes_executed": len(comprehensive_methodology.get("node_executions", [])),
+                        "total_processing_time": comprehensive_methodology.get("total_processing_time", 0),
+                        "ai_model_interactions": comprehensive_methodology.get("ai_model_interactions", 0),
+                        "overall_confidence": comprehensive_methodology.get("overall_confidence", 7.0)
+                    },
+                    "transparency_report": methodology_transparency,
+                    "has_complete_trace": True
+                }
+        
+        # Fallback: extract basic methodology from analysis metadata
+        analysis_metadata = result.get("analysis_metadata")
+        if analysis_metadata:
+            return {
+                "analysis_id": analysis_id,
+                "basic_methodology": {
+                    "search_strategy": analysis_metadata.get("search_strategy", "Unknown"),
+                    "gap_analysis_method": analysis_metadata.get("gap_analysis_method", "Unknown"),
+                    "opportunity_generation_method": analysis_metadata.get("opportunity_generation_method", "Unknown"),
+                    "total_searches": analysis_metadata.get("total_searches_performed", 0),
+                    "langgraph_nodes": analysis_metadata.get("langgraph_nodes_executed", [])
+                },
+                "confidence_metrics": {
+                    "overall_confidence": analysis_metadata.get("overall_confidence", 7.0),
+                    "source_quality_score": analysis_metadata.get("source_quality_score", 7.0),
+                    "analysis_completeness": analysis_metadata.get("analysis_completeness", 7.0)
+                },
+                "has_complete_trace": False
+            }
+        
+        raise HTTPException(status_code=404, detail="No methodology information found")
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get methodology for {analysis_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/opportunities/{analysis_id}/sources/analysis")
+async def get_sources_credibility_analysis(
+    analysis_id: str,
+    include_enhanced_metadata: bool = Query(False, description="Include enhanced source metadata from Tavily")
+):
+    """
+    Get comprehensive source credibility analysis including enhanced metadata,
+    credibility scoring, relevance assessment, and source quality indicators.
+    """
+    if analysis_id not in analysis_cache:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+    
+    try:
+        result = analysis_cache[analysis_id]
+        
+        # Extract enhanced source metadata if available
+        enhanced_metadata = result.get("enhanced_source_metadata", [])
+        
+        if enhanced_metadata and include_enhanced_metadata:
+            # Process enhanced metadata using SourceCollectionAnalyzer
+            metadata_objects = []
+            for metadata in enhanced_metadata:
+                if isinstance(metadata, dict):
+                    # Convert dict to TavilySourceMetadata if needed
+                    try:
+                        metadata_obj = TavilySourceMetadata(**metadata)
+                        metadata_objects.append(metadata_obj)
+                    except Exception as e:
+                        logger.warning(f"Failed to parse enhanced metadata: {str(e)}")
+                        continue
+                else:
+                    metadata_objects.append(metadata)
+            
+            if metadata_objects:
+                # Generate comprehensive source analysis
+                source_analysis = SourceCollectionAnalyzer.analyze_source_collection(metadata_objects)
+                
+                return {
+                    "analysis_id": analysis_id,
+                    "source_analysis": source_analysis.model_dump(),
+                    "enhanced_metadata_count": len(metadata_objects),
+                    "credibility_breakdown": {
+                        "high_credibility": len([s for s in metadata_objects if s.credibility_score >= 8.0]),
+                        "medium_credibility": len([s for s in metadata_objects if 6.0 <= s.credibility_score < 8.0]),
+                        "low_credibility": len([s for s in metadata_objects if s.credibility_score < 6.0])
+                    },
+                    "source_diversity": {
+                        "unique_domains": len(set(s.domain for s in metadata_objects)),
+                        "source_types": list(set(s.source_type.value for s in metadata_objects)),
+                        "search_queries": list(set(s.search_query for s in metadata_objects))
+                    },
+                    "quality_indicators": {
+                        "average_credibility": sum(s.credibility_score for s in metadata_objects) / len(metadata_objects),
+                        "average_relevance": sum(s.relevance_score for s in metadata_objects) / len(metadata_objects),
+                        "credibility_indicator": source_analysis.credibility_indicator,
+                        "quality_summary": source_analysis.quality_summary
+                    },
+                    "includes_enhanced_analysis": True
+                }
+        
+        # Fallback: analyze raw research results
+        raw_results = result.get("raw_research_results", [])
+        if raw_results:
+            # Basic source analysis from raw results
+            domains = list(set(r.get("url", "").split("/")[2] if "/" in r.get("url", "") else r.get("url", "") for r in raw_results if r.get("url")))
+            
+            # Simple credibility scoring based on domain types
+            high_credibility_domains = [d for d in domains if any(indicator in d.lower() for indicator in ['fda.gov', 'nih.gov', 'reuters.com', 'bloomberg.com', '.edu'])]
+            
+            return {
+                "analysis_id": analysis_id,
+                "basic_source_analysis": {
+                    "total_sources": len(raw_results),
+                    "unique_domains": len(domains),
+                    "high_credibility_domains": len(high_credibility_domains),
+                    "domain_list": domains[:10],  # Top 10 domains
+                    "credibility_estimate": "High" if len(high_credibility_domains) / len(domains) > 0.3 else "Moderate" if len(high_credibility_domains) > 0 else "Basic"
+                },
+                "source_summary": {
+                    "search_coverage": f"{len(raw_results)} sources analyzed",
+                    "domain_diversity": f"{len(domains)} unique domains",
+                    "credibility_assessment": "Basic analysis available"
+                },
+                "includes_enhanced_analysis": False
+            }
+        
+        raise HTTPException(status_code=404, detail="No source data found for analysis")
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get source analysis for {analysis_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/opportunities/{analysis_id}/traceability")
+async def get_analysis_traceability(
+    analysis_id: str,
+    opportunity_id: Optional[int] = Query(None, description="Get traceability for specific opportunity")
+):
+    """
+    Get complete data flow traceability from search queries to final recommendations.
+    Shows the complete path: Search → Source → Analysis → Gap → Opportunity → Recommendation.
+    """
+    if analysis_id not in analysis_cache:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+    
+    try:
+        result = analysis_cache[analysis_id]
+        
+        # Build comprehensive traceability map
+        traceability = {
+            "analysis_id": analysis_id,
+            "data_flow_stages": [],
+            "source_to_opportunity_mapping": {},
+            "query_to_source_mapping": {},
+            "processing_pipeline": []
+        }
+        
+        # Stage 1: Search Queries
+        search_queries = result.get("search_queries", [])
+        if search_queries:
+            traceability["data_flow_stages"].append({
+                "stage": "search_queries",
+                "description": "Initial search queries generated",
+                "data_count": len(search_queries),
+                "sample_data": search_queries[:5],
+                "processing_method": "Category-aware query generation"
+            })
+        
+        # Stage 2: Raw Research Results
+        raw_results = result.get("raw_research_results", [])
+        if raw_results:
+            traceability["data_flow_stages"].append({
+                "stage": "raw_research",
+                "description": "Raw search results from Tavily",
+                "data_count": len(raw_results),
+                "sample_data": [
+                    {
+                        "query": r.get("query", ""),
+                        "url": r.get("url", ""),
+                        "title": r.get("title", "")[:100] + "..." if r.get("title", "") else ""
+                    } for r in raw_results[:5]
+                ],
+                "processing_method": "Tavily search API with credibility scoring"
+            })
+            
+            # Map queries to sources
+            for result_item in raw_results:
+                query = result_item.get("query", "unknown")
+                url = result_item.get("url", "")
+                if query not in traceability["query_to_source_mapping"]:
+                    traceability["query_to_source_mapping"][query] = []
+                traceability["query_to_source_mapping"][query].append(url)
+        
+        # Stage 3: Enhanced Source Metadata
+        enhanced_metadata = result.get("enhanced_source_metadata", [])
+        if enhanced_metadata:
+            traceability["data_flow_stages"].append({
+                "stage": "enhanced_metadata",
+                "description": "Enhanced source analysis with credibility scoring",
+                "data_count": len(enhanced_metadata),
+                "sample_data": [
+                    {
+                        "url": m.get("url", ""),
+                        "credibility_score": m.get("credibility_score", 0),
+                        "relevance_score": m.get("relevance_score", 0),
+                        "source_type": m.get("source_type", "unknown")
+                    } for m in enhanced_metadata[:5]
+                ],
+                "processing_method": "AI-powered credibility and relevance assessment"
+            })
+        
+        # Stage 4: Clinical Gaps
+        clinical_gaps = result.get("clinical_gaps", [])
+        if clinical_gaps:
+            traceability["data_flow_stages"].append({
+                "stage": "clinical_gaps",
+                "description": "Identified competitive gaps and weaknesses",
+                "data_count": len(clinical_gaps),
+                "sample_data": [
+                    {
+                        "competitor": gap.get("competitor", ""),
+                        "gap_type": gap.get("gap_type", ""),
+                        "description": gap.get("description", "")[:100] + "..." if gap.get("description", "") else ""
+                    } for gap in clinical_gaps[:5]
+                ],
+                "processing_method": "Competitive gap analysis using LLM"
+            })
+        
+        # Stage 5: Strategic Opportunities
+        top_opportunities = result.get("top_opportunities", [])
+        if top_opportunities:
+            traceability["data_flow_stages"].append({
+                "stage": "strategic_opportunities",
+                "description": "Generated strategic opportunities",
+                "data_count": len(top_opportunities),
+                "sample_data": [
+                    {
+                        "id": opp.get("id", 0),
+                        "title": opp.get("title", ""),
+                        "category": opp.get("category", ""),
+                        "opportunity_score": opp.get("opportunity_score", 0)
+                    } for opp in top_opportunities[:5]
+                ],
+                "processing_method": "Gap-to-opportunity transformation with scoring"
+            })
+            
+            # Map sources to opportunities
+            for opp in top_opportunities:
+                opp_id = opp.get("id", 0)
+                source_urls = opp.get("source_urls", [])
+                if source_urls:
+                    traceability["source_to_opportunity_mapping"][str(opp_id)] = source_urls
+        
+        # Stage 6: LangGraph Processing Pipeline
+        if "final_report" in result:
+            report_data = result["final_report"]
+            methodology = report_data.get("comprehensive_methodology", {})
+            node_executions = methodology.get("node_executions", [])
+            
+            if node_executions:
+                traceability["processing_pipeline"] = [
+                    {
+                        "node_name": node.get("node_name", ""),
+                        "execution_order": node.get("execution_order", 0),
+                        "processing_duration": node.get("processing_duration", 0),
+                        "input_summary": node.get("input_data_summary", ""),
+                        "output_summary": node.get("output_data_summary", ""),
+                        "transformations": node.get("data_transformations", [])
+                    } for node in node_executions
+                ]
+        
+        # Specific opportunity traceability if requested
+        if opportunity_id:
+            target_opportunity = None
+            for opp in top_opportunities:
+                if opp.get("id") == opportunity_id:
+                    target_opportunity = opp
+                    break
+            
+            if not target_opportunity:
+                raise HTTPException(status_code=404, detail=f"Opportunity {opportunity_id} not found")
+            
+            # Build specific traceability for this opportunity
+            specific_traceability = {
+                "opportunity_id": opportunity_id,
+                "opportunity_title": target_opportunity.get("title", ""),
+                "source_urls": target_opportunity.get("source_urls", []),
+                "supporting_evidence": target_opportunity.get("supporting_evidence", ""),
+                "confidence_level": target_opportunity.get("confidence_level", 7.0),
+                "data_lineage": []
+            }
+            
+            # Trace back from opportunity to sources
+            opp_sources = target_opportunity.get("source_urls", [])
+            for source_url in opp_sources:
+                # Find the raw research result that generated this source
+                source_research = None
+                for raw_result in raw_results:
+                    if raw_result.get("url") == source_url:
+                        source_research = raw_result
+                        break
+                
+                if source_research:
+                    specific_traceability["data_lineage"].append({
+                        "search_query": source_research.get("query", ""),
+                        "source_url": source_url,
+                        "source_title": source_research.get("title", ""),
+                        "content_snippet": source_research.get("content", "")[:200] + "...",
+                        "contribution_to_opportunity": "Supporting evidence for opportunity analysis"
+                    })
+            
+            traceability["specific_opportunity_trace"] = specific_traceability
+        
+        # Summary metrics
+        traceability["traceability_summary"] = {
+            "total_stages": len(traceability["data_flow_stages"]),
+            "complete_pipeline": len(traceability["processing_pipeline"]) > 0,
+            "source_coverage": len(traceability["source_to_opportunity_mapping"]),
+            "query_diversity": len(traceability["query_to_source_mapping"]),
+            "traceability_score": min(10.0, len(traceability["data_flow_stages"]) * 1.5)
+        }
+        
+        return traceability
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get traceability for {analysis_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/opportunities/{analysis_id}/quality-report")
+async def get_analysis_quality_report(analysis_id: str):
+    """
+    Get comprehensive quality assurance report including validation results,
+    confidence assessment, and quality metrics across all analysis stages.
+    """
+    if analysis_id not in analysis_cache:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+    
+    try:
+        result = analysis_cache[analysis_id]
+        
+        # Initialize quality report
+        quality_report = {
+            "analysis_id": analysis_id,
+            "overall_quality_score": 7.0,
+            "quality_dimensions": {},
+            "validation_results": {},
+            "confidence_assessment": {},
+            "recommendations": []
+        }
+        
+        # 1. Source Quality Assessment
+        enhanced_metadata = result.get("enhanced_source_metadata", [])
+        raw_results = result.get("raw_research_results", [])
+        
+        if enhanced_metadata:
+            high_quality_sources = len([s for s in enhanced_metadata if s.get("credibility_score", 0) >= 8.0])
+            total_sources = len(enhanced_metadata)
+            source_quality_score = (high_quality_sources / total_sources) * 10 if total_sources > 0 else 5.0
+            
+            quality_report["quality_dimensions"]["source_quality"] = {
+                "score": source_quality_score,
+                "high_quality_sources": high_quality_sources,
+                "total_sources": total_sources,
+                "quality_percentage": (high_quality_sources / total_sources) * 100 if total_sources > 0 else 0,
+                "assessment": "High" if source_quality_score >= 8.0 else "Good" if source_quality_score >= 6.0 else "Moderate"
+            }
+        else:
+            quality_report["quality_dimensions"]["source_quality"] = {
+                "score": 5.0,
+                "assessment": "Basic - no enhanced metadata available",
+                "total_sources": len(raw_results)
+            }
+        
+        # 2. Analysis Completeness
+        stages_completed = []
+        if result.get("search_queries"): stages_completed.append("search_generation")
+        if result.get("raw_research_results"): stages_completed.append("research_execution")
+        if result.get("clinical_gaps"): stages_completed.append("gap_analysis")
+        if result.get("top_opportunities"): stages_completed.append("opportunity_generation")
+        if result.get("final_report"): stages_completed.append("report_synthesis")
+        
+        completeness_score = (len(stages_completed) / 5) * 10
+        quality_report["quality_dimensions"]["analysis_completeness"] = {
+            "score": completeness_score,
+            "stages_completed": stages_completed,
+            "total_stages": 5,
+            "completion_percentage": (len(stages_completed) / 5) * 100,
+            "assessment": "Complete" if completeness_score >= 8.0 else "Good" if completeness_score >= 6.0 else "Partial"
+        }
+        
+        # 3. Methodology Transparency
+        methodology_score = 5.0
+        methodology_indicators = []
+        
+        if "final_report" in result:
+            report_data = result["final_report"]
+            comprehensive_methodology = report_data.get("comprehensive_methodology", {})
+            
+            if comprehensive_methodology.get("node_executions"):
+                methodology_indicators.append("langgraph_execution_tracked")
+                methodology_score += 1.5
+            
+            if comprehensive_methodology.get("reasoning_chains"):
+                methodology_indicators.append("reasoning_chains_documented")
+                methodology_score += 1.5
+            
+            if comprehensive_methodology.get("decision_audit_trail"):
+                methodology_indicators.append("decision_audit_trail_available")
+                methodology_score += 1.0
+            
+            if report_data.get("methodology_transparency_report"):
+                methodology_indicators.append("transparency_report_generated")
+                methodology_score += 1.0
+        
+        quality_report["quality_dimensions"]["methodology_transparency"] = {
+            "score": min(10.0, methodology_score),
+            "indicators": methodology_indicators,
+            "transparency_level": "High" if methodology_score >= 8.0 else "Good" if methodology_score >= 6.0 else "Basic"
+        }
+        
+        # 4. Confidence Assessment
+        opportunities = result.get("top_opportunities", [])
+        if opportunities:
+            confidence_scores = [opp.get("confidence_level", 7.0) for opp in opportunities]
+            avg_confidence = sum(confidence_scores) / len(confidence_scores)
+            
+            quality_report["confidence_assessment"] = {
+                "average_confidence": avg_confidence,
+                "confidence_range": f"{min(confidence_scores):.1f} - {max(confidence_scores):.1f}",
+                "high_confidence_opportunities": len([s for s in confidence_scores if s >= 8.0]),
+                "total_opportunities": len(opportunities),
+                "confidence_distribution": {
+                    "high_8_10": len([s for s in confidence_scores if s >= 8.0]),
+                    "medium_6_8": len([s for s in confidence_scores if 6.0 <= s < 8.0]),
+                    "low_below_6": len([s for s in confidence_scores if s < 6.0])
+                }
+            }
+        
+        # 5. Overall Quality Score Calculation
+        dimension_scores = [d["score"] for d in quality_report["quality_dimensions"].values()]
+        overall_score = sum(dimension_scores) / len(dimension_scores) if dimension_scores else 5.0
+        quality_report["overall_quality_score"] = overall_score
+        
+        # 6. Quality Recommendations
+        recommendations = []
+        
+        if quality_report["quality_dimensions"]["source_quality"]["score"] < 7.0:
+            recommendations.append("Consider expanding search queries to include more high-credibility sources")
+        
+        if quality_report["quality_dimensions"]["analysis_completeness"]["score"] < 8.0:
+            recommendations.append("Complete all analysis stages for comprehensive results")
+        
+        if quality_report["quality_dimensions"]["methodology_transparency"]["score"] < 7.0:
+            recommendations.append("Enable enhanced methodology tracking for better transparency")
+        
+        if not recommendations:
+            recommendations.append("Analysis meets high quality standards")
+        
+        quality_report["recommendations"] = recommendations
+        
+        # 7. Quality Grade
+        if overall_score >= 9.0:
+            quality_grade = "A"
+        elif overall_score >= 8.0:
+            quality_grade = "B"
+        elif overall_score >= 7.0:
+            quality_grade = "C"
+        elif overall_score >= 6.0:
+            quality_grade = "D"
+        else:
+            quality_grade = "F"
+        
+        quality_report["quality_grade"] = quality_grade
+        quality_report["quality_summary"] = f"Grade {quality_grade} - {overall_score:.1f}/10 overall quality score"
+        
+        return quality_report
+        
+    except Exception as e:
+        logger.error(f"Failed to generate quality report for {analysis_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":

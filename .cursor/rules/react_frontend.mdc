@@ -1,0 +1,345 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# React Frontend Development Rules
+
+## **Project Structure Requirements**
+
+### **Dedicated Frontend Directory**
+- **ALWAYS use `src/frontend-react/` for React development**
+- **NEVER modify existing Streamlit files in `src/frontend/`**
+- **Preserve existing backend infrastructure completely**
+
+### **Required Folder Structure**
+```
+src/frontend-react/
+├── public/                     # Static assets
+├── src/
+│   ├── components/            # Reusable UI components
+│   │   ├── common/           # Generic components
+│   │   ├── opportunity/      # Opportunity-specific
+│   │   ├── analysis/         # Analysis workflow
+│   │   └── layout/          # Layout components
+│   ├── pages/               # Route-level pages
+│   ├── hooks/               # Custom React hooks
+│   ├── services/            # API service layer
+│   ├── store/               # State management
+│   ├── utils/               # Utility functions
+│   ├── types/               # TypeScript definitions
+│   ├── constants/           # App constants
+│   └── styles/              # Global styles
+└── tests/                   # Test files
+```
+
+## **Technology Stack Standards**
+
+### **Core Technologies**
+- **React 18+** with TypeScript strict mode
+- **Vite** for build tooling and development server
+- **Material-UI (MUI)** for UI components
+- **React Query + Zustand** for state management
+- **Axios** for API integration
+
+### **Code Quality Tools**
+- **ESLint** with Airbnb TypeScript configuration
+- **Prettier** for consistent formatting
+- **Jest + React Testing Library** for unit tests
+- **Cypress** for end-to-end testing
+
+## **Component Development Patterns**
+
+### **Component Structure**
+```typescript
+// ✅ DO: Use this component structure
+import React from 'react';
+import { Box, Card, Typography } from '@mui/material';
+import type { OpportunityCardProps } from '@/types/opportunity';
+
+export const OpportunityCard: React.FC<OpportunityCardProps> = ({ 
+  opportunity, 
+  onExpand 
+}) => {
+  return (
+    <Card sx={{ p: 2, mb: 2 }}>
+      <Typography variant="h6">{opportunity.title}</Typography>
+      <Typography variant="body2">{opportunity.description}</Typography>
+    </Card>
+  );
+};
+```
+
+### **TypeScript Requirements**
+- **Strict mode enabled** - no `any` types
+- **Proper interface definitions** for all props and data
+- **Path aliases** configured for clean imports (`@/components`, `@/types`)
+
+```typescript
+// ✅ DO: Define comprehensive interfaces
+interface OpportunityCardProps {
+  opportunity: Opportunity;
+  onExpand?: (id: string) => void;
+  isExpanded?: boolean;
+}
+
+// ❌ DON'T: Use any types
+const handleClick = (data: any) => { /* ... */ }
+```
+
+## **API Integration Patterns**
+
+### **Service Layer Organization**
+```typescript
+// ✅ DO: Create typed API services
+// src/services/opportunityService.ts
+import axios from 'axios';
+import type { Opportunity, AnalysisRequest } from '@/types/api';
+
+const api = axios.create({
+  baseURL: process.env.VITE_API_BASE_URL || 'http://localhost:8000',
+});
+
+export const opportunityService = {
+  async getOpportunities(): Promise<Opportunity[]> {
+    const response = await api.get<Opportunity[]>('/api/opportunities');
+    return response.data;
+  },
+  
+  async runAnalysis(request: AnalysisRequest): Promise<AnalysisResult> {
+    const response = await api.post<AnalysisResult>('/api/analyze', request);
+    return response.data;
+  }
+};
+```
+
+### **React Query Integration**
+```typescript
+// ✅ DO: Use React Query for server state
+import { useQuery } from '@tanstack/react-query';
+import { opportunityService } from '@/services/opportunityService';
+
+export const useOpportunities = () => {
+  return useQuery({
+    queryKey: ['opportunities'],
+    queryFn: opportunityService.getOpportunities,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+```
+
+## **State Management Patterns**
+
+### **Zustand Store Structure**
+```typescript
+// ✅ DO: Create typed Zustand stores
+import { create } from 'zustand';
+import { devtools, persist } from 'zustand/middleware';
+
+interface AnalysisState {
+  competitors: string[];
+  focusArea: string;
+  isAnalyzing: boolean;
+  setCompetitors: (competitors: string[]) => void;
+  setFocusArea: (area: string) => void;
+  setAnalyzing: (analyzing: boolean) => void;
+}
+
+export const useAnalysisStore = create<AnalysisState>()(
+  devtools(
+    persist(
+      (set) => ({
+        competitors: [],
+        focusArea: '',
+        isAnalyzing: false,
+        setCompetitors: (competitors) => set({ competitors }),
+        setFocusArea: (focusArea) => set({ focusArea }),
+        setAnalyzing: (isAnalyzing) => set({ isAnalyzing }),
+      }),
+      { name: 'analysis-store' }
+    )
+  )
+);
+```
+
+## **Progressive Disclosure Implementation**
+
+### **Three-Tier Architecture**
+- **Summary Level**: Basic opportunity info in cards
+- **Details Level**: Expanded details with metrics
+- **Full Analysis**: Complete analysis with sources
+
+```typescript
+// ✅ DO: Implement smooth progressive disclosure
+const OpportunityCardWithDisclosure: React.FC<Props> = ({ opportunity }) => {
+  const [disclosureLevel, setDisclosureLevel] = useState<'summary' | 'details' | 'full'>('summary');
+  
+  return (
+    <Card>
+      <OpportunitySummary opportunity={opportunity} />
+      
+      <Collapse in={disclosureLevel !== 'summary'}>
+        <OpportunityDetails opportunity={opportunity} />
+      </Collapse>
+      
+      <Collapse in={disclosureLevel === 'full'}>
+        <OpportunityFullAnalysis opportunity={opportunity} />
+      </Collapse>
+    </Card>
+  );
+};
+```
+
+## **Backend Integration Requirements**
+
+### **API Endpoint Compatibility**
+- **Preserve existing FastAPI endpoints** - no backend changes
+- **Match Pydantic model structures** in TypeScript interfaces
+- **Use existing authentication patterns** when implemented
+
+### **WebSocket Integration**
+```typescript
+// ✅ DO: Integrate with existing streaming architecture
+import { useEffect, useState } from 'react';
+
+export const useAnalysisStream = (analysisId: string) => {
+  const [progress, setProgress] = useState(0);
+  const [status, setStatus] = useState<string>('');
+  
+  useEffect(() => {
+    const ws = new WebSocket(`ws://localhost:8000/ws/analysis/${analysisId}`);
+    
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      setProgress(data.progress);
+      setStatus(data.status);
+    };
+    
+    return () => ws.close();
+  }, [analysisId]);
+  
+  return { progress, status };
+};
+```
+
+## **Testing Requirements**
+
+### **Component Testing Patterns**
+```typescript
+// ✅ DO: Comprehensive component testing
+import { render, screen, fireEvent } from '@testing-library/react';
+import { OpportunityCard } from '@/components/opportunity/OpportunityCard';
+
+describe('OpportunityCard', () => {
+  const mockOpportunity = {
+    id: '1',
+    title: 'Test Opportunity',
+    description: 'Test description',
+    score: 8.5
+  };
+
+  it('renders opportunity information correctly', () => {
+    render(<OpportunityCard opportunity={mockOpportunity} />);
+    
+    expect(screen.getByText('Test Opportunity')).toBeInTheDocument();
+    expect(screen.getByText('Test description')).toBeInTheDocument();
+  });
+
+  it('calls onExpand when clicked', () => {
+    const mockOnExpand = jest.fn();
+    render(<OpportunityCard opportunity={mockOpportunity} onExpand={mockOnExpand} />);
+    
+    fireEvent.click(screen.getByRole('button'));
+    expect(mockOnExpand).toHaveBeenCalledWith('1');
+  });
+});
+```
+
+## **Performance Requirements**
+
+### **Bundle Size Optimization**
+- **Code splitting** for routes and large components
+- **Lazy loading** for progressive disclosure content
+- **Tree shaking** for unused Material-UI components
+
+```typescript
+// ✅ DO: Implement lazy loading
+import { lazy, Suspense } from 'react';
+
+const OpportunityFullAnalysis = lazy(() => import('@/components/opportunity/OpportunityFullAnalysis'));
+
+const OpportunityCard: React.FC<Props> = ({ opportunity }) => {
+  return (
+    <Card>
+      <OpportunitySummary opportunity={opportunity} />
+      {showFullAnalysis && (
+        <Suspense fallback={<CircularProgress />}>
+          <OpportunityFullAnalysis opportunity={opportunity} />
+        </Suspense>
+      )}
+    </Card>
+  );
+};
+```
+
+## **Styling Guidelines**
+
+### **Material-UI Theme Integration**
+```typescript
+// ✅ DO: Create consistent theme
+import { createTheme } from '@mui/material/styles';
+
+export const theme = createTheme({
+  palette: {
+    primary: {
+      main: '#667eea', // Orthopedic Intelligence brand color
+    },
+    secondary: {
+      main: '#764ba2',
+    },
+  },
+  typography: {
+    h1: {
+      fontSize: '2.5rem',
+      fontWeight: 600,
+    },
+  },
+});
+```
+
+### **Responsive Design Patterns**
+```typescript
+// ✅ DO: Use Material-UI responsive utilities
+import { useTheme, useMediaQuery } from '@mui/material';
+
+const OpportunityGrid: React.FC = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  
+  return (
+    <Grid container spacing={isMobile ? 1 : 2}>
+      {/* Responsive grid content */}
+    </Grid>
+  );
+};
+```
+
+## **Development Workflow**
+
+### **Incremental Development**
+- **Start with basic components** before adding complexity
+- **Test each component** before moving to the next
+- **Preserve Streamlit functionality** during development
+- **Regular integration testing** with backend APIs
+
+### **Branch Strategy**
+- **Feature branches** for each major component
+- **Regular commits** with descriptive messages
+- **Pull request reviews** for code quality
+
+---
+
+**Related Files:**
+- [backend_organization.mdc](mdc:.cursor/rules/backend_organization.mdc) - Backend structure guidelines
+- [progressive_disclosure.mdc](mdc:.cursor/rules/progressive_disclosure.mdc) - UI patterns
+- [taskmaster.mdc](mdc:.cursor/rules/taskmaster.mdc) - Development workflow

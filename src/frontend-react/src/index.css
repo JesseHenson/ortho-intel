@@ -1,0 +1,168 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  
+  body {
+    @apply bg-gray-50 text-gray-900;
+    @apply min-h-screen;
+  }
+}
+
+@layer components {
+  /* Opportunity Card Styles */
+  .opportunity-card {
+    @apply bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-all duration-200;
+  }
+  
+  .opportunity-card:hover {
+    @apply border-primary-200 shadow-lg;
+  }
+  
+  .opportunity-card-quick-win {
+    @apply bg-gradient-to-br from-opportunity-500 to-opportunity-600;
+    @apply text-white p-6 rounded-xl shadow-card;
+    @apply transition-all duration-300 hover:shadow-card-hover hover:-translate-y-1;
+  }
+  
+  .opportunity-card-strategic {
+    @apply bg-gradient-to-br from-strategic-500 to-strategic-600;
+    @apply text-white p-6 rounded-xl shadow-card;
+    @apply transition-all duration-300 hover:shadow-card-hover hover:-translate-y-1;
+  }
+  
+  /* Executive Summary Styles */
+  .executive-summary {
+    @apply bg-gradient-to-br from-gray-800 to-gray-900;
+    @apply text-white p-8 rounded-2xl shadow-card;
+  }
+  
+  /* Metric Card Styles */
+  .metric-card {
+    @apply bg-gray-50 rounded-lg p-4 text-center border border-gray-100;
+  }
+  
+  .metric-value {
+    @apply text-2xl font-bold mb-1;
+  }
+  
+  .metric-label {
+    @apply text-sm text-gray-600 font-medium;
+  }
+  
+  /* Category Tab Styles */
+  .category-tab {
+    @apply bg-gray-100 p-4 rounded-lg;
+    @apply border-l-4 border-primary-500;
+    @apply transition-all duration-300 hover:bg-gray-200;
+  }
+  
+  /* Competitor Profile Styles */
+  .competitor-profile {
+    @apply bg-white p-4 rounded-lg shadow-card;
+    @apply transition-all duration-300 hover:shadow-card-hover;
+  }
+  
+  /* Button Styles */
+  .btn-primary {
+    @apply bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2;
+  }
+  
+  .btn-outline {
+    @apply border border-primary-600 text-primary-600 hover:bg-primary-600 hover:text-white;
+    @apply px-4 py-2 rounded-lg font-medium;
+    @apply transition-all duration-200;
+    @apply focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+  }
+  
+  /* Progress Bar Styles */
+  .progress-bar {
+    @apply bg-gray-200 rounded-full h-2 overflow-hidden;
+  }
+  
+  .progress-fill {
+    @apply h-full bg-gradient-to-r from-primary-500 to-secondary-500 transition-all duration-300;
+  }
+  
+  /* Loading Animation */
+  .loading-spinner {
+    @apply animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600;
+  }
+  
+  /* Card Animations */
+  .animate-card-enter {
+    @apply animate-fade-in;
+  }
+  
+  .animate-slide-up {
+    @apply animate-slide-up;
+  }
+  
+  /* Status indicator improvements */
+  .status-badge {
+    @apply px-3 py-1 rounded-full text-sm font-medium;
+  }
+
+  /* Opportunity implementation steps */
+  .implementation-step {
+    @apply flex items-start space-x-3 text-sm text-gray-700;
+  }
+
+  .step-number {
+    @apply w-6 h-6 bg-primary-100 text-primary-700 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0;
+  }
+
+  /* Evidence cards */
+  .evidence-card {
+    @apply border border-gray-200 rounded-lg p-3 bg-gray-50 hover:bg-gray-100 transition-colors;
+  }
+
+  .credibility-badge {
+    @apply text-xs bg-green-100 text-green-800 px-2 py-1 rounded font-medium;
+  }
+}
+
+@layer utilities {
+  /* Custom gradient backgrounds */
+  .gradient-primary {
+    background: linear-gradient(135deg, theme('colors.primary.500'), theme('colors.secondary.500'));
+  }
+  
+  .gradient-opportunity {
+    background: linear-gradient(135deg, theme('colors.opportunity.500'), theme('colors.opportunity.600'));
+  }
+  
+  .gradient-strategic {
+    background: linear-gradient(135deg, theme('colors.strategic.500'), theme('colors.strategic.600'));
+  }
+  
+  .gradient-executive {
+    background: linear-gradient(135deg, theme('colors.gray.800'), theme('colors.gray.900'));
+  }
+  
+  /* Text gradients */
+  .text-gradient-primary {
+    background: linear-gradient(135deg, theme('colors.primary.600'), theme('colors.secondary.600'));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  /* Line clamp utility for truncating text */
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}

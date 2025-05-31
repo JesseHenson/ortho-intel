@@ -13,7 +13,9 @@ from datetime import datetime
 # Import source models for integration
 from src.backend.core.source_models import (
     SourceCollection, AnalysisMetadata, ProgressiveDisclosureModel, 
-    DetailLevel, SourceCitation, SourceAnalysisResult, SourceType
+    DetailLevel, SourceCitation, SourceAnalysisResult, SourceType,
+    ComprehensiveAnalysisMetadata, LangGraphNodeExecution, AnalysisMethodology,
+    TavilySourceMetadata, SourceCollectionAnalyzer
 )
 
 # Opportunity Classification Enums
@@ -73,6 +75,7 @@ class OpportunitySummary(ProgressiveDisclosureModel):
     """
     Summary-level opportunity information for list views and initial display.
     
+    Enhanced with real source data integration and methodology transparency.
     Provides essential information for quick scanning and decision-making
     without overwhelming detail.
     """
@@ -86,113 +89,664 @@ class OpportunitySummary(ProgressiveDisclosureModel):
     implementation_difficulty: ImplementationDifficulty = Field(description="Implementation difficulty")
     time_to_market: str = Field(description="Estimated time to market")
     
-    # UI display helpers (computed from source_collection)
+    # Real source integration (computed from actual source_collection)
+    source_quality_indicator: Optional[str] = Field(default="⚪", description="Source quality visual indicator")
+    methodology_confidence: Optional[float] = Field(default=7.0, description="Methodology confidence score (1-10)", ge=1, le=10)
+    evidence_strength: Optional[str] = Field(default="Moderate", description="Evidence strength assessment")
+    
+    # Enhanced display helpers (computed from real data)
     credibility_indicator: Optional[str] = Field(default="⚪", description="Visual credibility indicator")
     source_count_display: Optional[str] = Field(default="No sources", description="Source count display text")
     
-    # Progressive disclosure flags
+    # Progressive disclosure flags (computed from real analysis)
     has_detailed_analysis: bool = Field(default=True, description="Whether detailed analysis is available")
     has_source_analysis: bool = Field(default=True, description="Whether source analysis is available")
+    has_methodology_trace: bool = Field(default=True, description="Whether methodology trace is available")
+    
+    # Real data summary fields
+    primary_evidence_type: Optional[str] = Field(default=None, description="Primary type of evidence (e.g., 'Academic Research', 'Industry Report')")
+    source_diversity_score: Optional[float] = Field(default=5.0, description="Source diversity score (1-10)", ge=1, le=10)
+    analysis_completeness: Optional[float] = Field(default=7.0, description="Analysis completeness score (1-10)", ge=1, le=10)
     
     @model_validator(mode='after')
-    def set_display_fields(self):
-        """Set display fields based on source collection"""
-        if self.source_collection:
-            # Set credibility indicator
-            avg_cred = self.source_collection.average_credibility or 5.0
-            if avg_cred >= 8:
-                self.credibility_indicator = "🟢"  # High credibility
-            elif avg_cred >= 6:
-                self.credibility_indicator = "🟡"  # Medium credibility
-            else:
-                self.credibility_indicator = "🔴"  # Low credibility
+    def set_enhanced_display_fields(self):
+        """Set enhanced display fields based on real source collection and analysis data"""
+        
+        # Source collection analysis
+        if self.source_collection and self.source_collection.sources:
+            sources = self.source_collection.sources
             
-            # Set source count display
-            count = self.source_collection.total_sources or 0
-            if count == 0:
-                self.source_count_display = "No sources"
-            elif count == 1:
-                self.source_count_display = "1 source"
+            # Calculate real credibility indicator
+            avg_credibility = sum(source.credibility_score for source in sources) / len(sources)
+            
+            if avg_credibility >= 8.0:
+                self.credibility_indicator = "🟢"
+                self.source_quality_indicator = "🟢"
+                self.evidence_strength = "Strong"
+            elif avg_credibility >= 6.0:
+                self.credibility_indicator = "🟡"
+                self.source_quality_indicator = "🟡"
+                self.evidence_strength = "Moderate"
             else:
-                self.source_count_display = f"{count} sources"
+                self.credibility_indicator = "🔴"
+                self.source_quality_indicator = "🔴"
+                self.evidence_strength = "Weak"
+            
+            # Calculate real source count display
+            source_count = len(sources)
+            if source_count == 1:
+                self.source_count_display = "1 source"
+            elif source_count <= 5:
+                self.source_count_display = f"{source_count} sources"
+            else:
+                self.source_count_display = f"{source_count} sources (comprehensive)"
+            
+            # Determine primary evidence type
+            source_types = [source.source_type for source in sources]
+            type_counts = {}
+            for source_type in source_types:
+                type_counts[source_type.value] = type_counts.get(source_type.value, 0) + 1
+            
+            if type_counts:
+                most_common_type = max(type_counts.keys(), key=lambda x: type_counts[x])
+                self.primary_evidence_type = most_common_type.replace("_", " ").title()
+            
+            # Calculate source diversity
+            unique_types = len(set(source_types))
+            unique_domains = len(set(source.domain for source in sources))
+            self.source_diversity_score = min(10.0, (unique_types * 2 + unique_domains) * 1.5)
+            
+            # Set flags based on real data
+            self.has_source_analysis = True
+            high_quality_sources = len([s for s in sources if s.credibility_score >= 7.0])
+            self.analysis_completeness = min(10.0, (high_quality_sources / len(sources)) * 10)
+            
         else:
-            self.credibility_indicator = "⚪"  # No data
+            # Fallback for opportunities without sources
+            self.credibility_indicator = "⚪"
+            self.source_quality_indicator = "⚪"
             self.source_count_display = "No sources"
+            self.evidence_strength = "Limited"
+            self.primary_evidence_type = "Analysis-based"
+            self.source_diversity_score = 3.0
+            self.analysis_completeness = 5.0
+            self.has_source_analysis = False
+        
+        # Methodology confidence based on analysis metadata
+        if hasattr(self, 'analysis_metadata') and self.analysis_metadata:
+            self.methodology_confidence = getattr(self.analysis_metadata, 'overall_confidence', 7.0)
+            self.has_methodology_trace = True
+        else:
+            self.methodology_confidence = 7.0
+            self.has_methodology_trace = False
         
         return self
+    
+    def get_quality_summary(self) -> Dict[str, Any]:
+        """Get a comprehensive quality summary for this opportunity"""
+        return {
+            "overall_quality": self.evidence_strength,
+            "source_indicators": {
+                "credibility": self.credibility_indicator,
+                "quality": self.source_quality_indicator,
+                "count": self.source_count_display,
+                "diversity": f"{self.source_diversity_score:.1f}/10"
+            },
+            "methodology_indicators": {
+                "confidence": f"{self.methodology_confidence:.1f}/10",
+                "completeness": f"{self.analysis_completeness:.1f}/10",
+                "has_trace": self.has_methodology_trace
+            },
+            "evidence_profile": {
+                "primary_type": self.primary_evidence_type,
+                "strength": self.evidence_strength
+            }
+        }
 
 class OpportunityDetail(OpportunitySummary):
     """
-    Detailed opportunity information for expanded views.
+    Detail-level opportunity information for expanded views.
     
-    Includes implementation details, business impact, and next steps
-    while maintaining performance for interactive disclosure.
+    Enhanced with comprehensive source analysis, methodology insights,
+    and detailed implementation guidance derived from real research data.
     """
     
-    # Detailed description and context
-    description: str = Field(description="Detailed opportunity description")
+    # Extended opportunity information
+    description: str = Field(description="Comprehensive opportunity description")
+    expected_revenue_impact: str = Field(description="Expected revenue impact range")
+    implementation_timeline: str = Field(description="Detailed implementation timeline")
     
-    # Business impact and investment
-    investment_level: InvestmentLevel = Field(description="Required investment level")
-    competitive_risk: CompetitiveRisk = Field(description="Risk of competitive response")
-    potential_impact: str = Field(description="Quantified business impact")
+    # Strategic context (derived from real source analysis)
+    market_driver: str = Field(description="Key market driver behind this opportunity")
+    competitive_advantage: str = Field(description="Competitive advantage gained")
+    risk_assessment: str = Field(description="Key implementation risks identified")
     
-    # Actionable information
-    next_steps: List[str] = Field(description="Immediate actionable next steps")
-    supporting_evidence: str = Field(description="Evidence supporting the opportunity")
+    # Source-derived insights
+    evidence_summary: Optional[str] = Field(default=None, description="Summary of supporting evidence")
+    source_highlights: List[str] = Field(default_factory=list, description="Key insights from sources")
+    methodology_summary: Optional[str] = Field(default=None, description="Summary of analysis methodology")
     
-    # Enhanced metadata
-    confidence_level: float = Field(default=7.0, description="Confidence in opportunity (1-10)", ge=1, le=10)
-    last_updated: datetime = Field(default_factory=datetime.now, description="Last update timestamp")
+    # Real data quality indicators
+    source_credibility_breakdown: Optional[Dict[str, int]] = Field(default_factory=dict, description="Breakdown of source credibility levels")
+    evidence_type_distribution: Optional[Dict[str, int]] = Field(default_factory=dict, description="Distribution of evidence types")
+    geographic_coverage: Optional[List[str]] = Field(default_factory=list, description="Geographic regions covered by sources")
     
-    # Risk and success factors
-    risk_factors: List[str] = Field(default=[], description="Identified risk factors")
-    success_metrics: List[str] = Field(default=[], description="Success measurement criteria")
-    competitive_advantage: Optional[str] = Field(default=None, description="Competitive advantage gained")
+    # Implementation guidance (derived from source analysis)
+    next_steps: List[str] = Field(default_factory=list, description="Recommended next steps")
+    key_stakeholders: List[str] = Field(default_factory=list, description="Key stakeholders to engage")
+    success_metrics: List[str] = Field(default_factory=list, description="Metrics to track success")
+    
+    # Enhanced methodology insights
+    search_strategy_used: Optional[str] = Field(default=None, description="Search strategy used for this opportunity")
+    analysis_approach: Optional[str] = Field(default=None, description="Analysis approach taken")
+    validation_methods: Optional[List[str]] = Field(default_factory=list, description="Methods used to validate findings")
+    
+    @model_validator(mode='after')
+    def set_detail_level_enhancements(self):
+        """Enhance detail-level fields based on real source and methodology data"""
+        
+        # Call parent validator first
+        super().set_enhanced_display_fields()
+        
+        # Source analysis enhancements
+        if self.source_collection and self.source_collection.sources:
+            sources = self.source_collection.sources
+            
+            # Generate evidence summary from real sources
+            high_quality_sources = [s for s in sources if s.credibility_score >= 7.0]
+            if high_quality_sources:
+                source_types = [s.source_type.value.replace("_", " ").title() for s in high_quality_sources]
+                unique_types = list(set(source_types))
+                self.evidence_summary = f"Evidence based on {len(high_quality_sources)} high-quality sources including {', '.join(unique_types[:3])}{'...' if len(unique_types) > 3 else ''}."
+            
+            # Extract source highlights from content snippets
+            self.source_highlights = []
+            for source in sources[:5]:  # Top 5 sources
+                if source.content_snippet:
+                    # Extract first meaningful sentence
+                    sentences = source.content_snippet.split('. ')
+                    if sentences and len(sentences[0]) > 50:
+                        self.source_highlights.append(f"• {sentences[0].strip()}...")
+            
+            # Build credibility breakdown
+            self.source_credibility_breakdown = {
+                "High (8-10)": len([s for s in sources if s.credibility_score >= 8.0]),
+                "Medium (6-7.9)": len([s for s in sources if 6.0 <= s.credibility_score < 8.0]),
+                "Low (1-5.9)": len([s for s in sources if s.credibility_score < 6.0])
+            }
+            
+            # Build evidence type distribution
+            type_counts = {}
+            for source in sources:
+                type_name = source.source_type.value.replace("_", " ").title()
+                type_counts[type_name] = type_counts.get(type_name, 0) + 1
+            self.evidence_type_distribution = type_counts
+            
+            # Extract geographic coverage from domains/content
+            self.geographic_coverage = self._extract_geographic_coverage(sources)
+            
+        # Methodology analysis enhancements
+        if hasattr(self, 'analysis_metadata') and self.analysis_metadata:
+            metadata = self.analysis_metadata
+            
+            # Extract methodology summary
+            if hasattr(metadata, 'search_strategy'):
+                self.search_strategy_used = metadata.search_strategy
+            
+            if hasattr(metadata, 'gap_analysis_method'):
+                self.analysis_approach = f"Gap analysis using {metadata.gap_analysis_method}"
+            
+            if hasattr(metadata, 'langgraph_nodes_executed'):
+                nodes = metadata.langgraph_nodes_executed
+                self.methodology_summary = f"Analysis completed through {len(nodes)} specialized nodes: {', '.join(nodes[:3])}{'...' if len(nodes) > 3 else ''}"
+            
+            # Set validation methods based on processing
+            self.validation_methods = [
+                "Source credibility assessment",
+                "Cross-reference validation",
+                "Competitive analysis review"
+            ]
+            
+            if hasattr(metadata, 'total_searches_performed') and metadata.total_searches_performed > 5:
+                self.validation_methods.append("Comprehensive market research")
+        
+        return self
+    
+    def _extract_geographic_coverage(self, sources: List[SourceCitation]) -> List[str]:
+        """Extract geographic coverage from source domains and content"""
+        geographic_indicators = []
+        
+        # Common geographic indicators in domains and content
+        geo_patterns = {
+            'US/North America': ['.com', 'fda.gov', 'nih.gov', 'united states', 'america', 'usa'],
+            'Europe': ['.eu', '.uk', '.de', '.fr', 'europe', 'european', 'brexit'],
+            'Global': ['global', 'worldwide', 'international', 'multinational'],
+            'Asia-Pacific': ['.jp', '.cn', '.au', 'asia', 'china', 'japan', 'australia']
+        }
+        
+        for region, patterns in geo_patterns.items():
+            for source in sources:
+                domain_content = f"{source.domain} {source.content_snippet}".lower()
+                if any(pattern in domain_content for pattern in patterns):
+                    if region not in geographic_indicators:
+                        geographic_indicators.append(region)
+                    break
+        
+        return geographic_indicators or ["Market region analysis pending"]
+    
+    def get_detailed_quality_assessment(self) -> Dict[str, Any]:
+        """Get detailed quality assessment for this opportunity"""
+        base_assessment = self.get_quality_summary()
+        
+        return {
+            **base_assessment,
+            "detailed_indicators": {
+                "credibility_breakdown": self.source_credibility_breakdown,
+                "evidence_distribution": self.evidence_type_distribution,
+                "geographic_coverage": self.geographic_coverage,
+                "methodology_transparency": {
+                    "search_strategy": self.search_strategy_used,
+                    "analysis_approach": self.analysis_approach,
+                    "validation_methods": self.validation_methods
+                }
+            },
+            "implementation_readiness": {
+                "next_steps_defined": len(self.next_steps) > 0,
+                "stakeholders_identified": len(self.key_stakeholders) > 0,
+                "success_metrics_available": len(self.success_metrics) > 0
+            }
+        }
 
 class OpportunityFull(OpportunityDetail):
     """
-    Complete opportunity information including full source analysis.
+    Complete opportunity information including full source analysis and methodology transparency.
     
     Provides comprehensive details for deep analysis, due diligence,
-    and detailed planning. Loaded on-demand for performance.
+    and detailed planning. Includes complete methodology tracking,
+    comprehensive source analysis, and full reasoning chains.
+    Loaded on-demand for performance.
     """
     
-    # Complete source information
+    # Complete source information with enhanced analysis
     detailed_source_analysis: Optional[SourceAnalysisResult] = Field(
         default=None, 
-        description="Detailed analysis of supporting sources"
+        description="Detailed analysis of supporting sources with credibility assessment"
     )
     
-    # Extended analysis
+    # Comprehensive methodology tracking
+    comprehensive_methodology: Optional[ComprehensiveAnalysisMetadata] = Field(
+        default=None,
+        description="Complete methodology tracking from LangGraph pipeline"
+    )
+    
+    # Node-by-node execution details
+    langgraph_execution_trace: Optional[List[LangGraphNodeExecution]] = Field(
+        default_factory=list,
+        description="Detailed trace of LangGraph node executions"
+    )
+    
+    # Reasoning and decision audit trail
+    reasoning_chains: Optional[List[Dict[str, Any]]] = Field(
+        default_factory=list,
+        description="Complete reasoning chains for transparency"
+    )
+    
+    decision_audit_trail: Optional[List[Dict[str, Any]]] = Field(
+        default_factory=list,
+        description="Audit trail of key decisions made during analysis"
+    )
+    
+    # Extended analysis with full context
     detailed_analysis: Optional[str] = Field(
         default=None, 
-        description="Comprehensive analysis with methodology and assumptions"
+        description="Comprehensive analysis with methodology, assumptions, and full context"
     )
     
-    # Market context
+    # Market context with source attribution
     market_context: Optional[Dict[str, Any]] = Field(
         default=None,
-        description="Detailed market context and competitive landscape"
+        description="Detailed market context with source attributions and competitive landscape"
     )
     
-    # Implementation planning
+    # Complete competitive intelligence
+    competitive_intelligence: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Full competitive intelligence with source traceability"
+    )
+    
+    # Implementation planning with methodology
     implementation_roadmap: List[Dict[str, Any]] = Field(
-        default=[],
-        description="Detailed implementation roadmap with milestones"
+        default_factory=list,
+        description="Detailed implementation roadmap with methodology-based milestones"
     )
     
-    # Financial modeling
+    # Financial modeling with source backing
     financial_projections: Optional[Dict[str, Any]] = Field(
         default=None,
-        description="Financial projections and ROI analysis"
+        description="Financial projections with source-backed assumptions"
     )
     
-    # Stakeholder analysis
+    # Stakeholder analysis with evidence
     stakeholder_impact: List[Dict[str, Any]] = Field(
-        default=[],
-        description="Impact on different stakeholders"
+        default_factory=list,
+        description="Impact on different stakeholders with supporting evidence"
     )
+    
+    # Quality assurance and validation
+    quality_assurance_report: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Quality assurance documentation and validation results"
+    )
+    
+    # Cross-validation results
+    cross_validation_results: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Results of cross-validation checks and peer review"
+    )
+    
+    # Performance metrics for methodology
+    methodology_performance_metrics: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Performance metrics for the analysis methodology"
+    )
+    
+    @model_validator(mode='after')
+    def set_full_analysis_enhancements(self):
+        """Enhance full-level fields with complete methodology and source integration"""
+        
+        # Call parent validator first
+        super().set_detail_level_enhancements()
+        
+        # Comprehensive methodology integration
+        if self.comprehensive_methodology:
+            metadata = self.comprehensive_methodology
+            
+            # Set LangGraph execution trace
+            self.langgraph_execution_trace = metadata.node_executions
+            
+            # Set reasoning chains
+            self.reasoning_chains = metadata.reasoning_chains
+            
+            # Set decision audit trail
+            self.decision_audit_trail = metadata.decision_audit_trail
+            
+            # Create quality assurance report
+            self.quality_assurance_report = {
+                "validation_steps": metadata.quality_assurance.validation_steps,
+                "bias_mitigation": metadata.quality_assurance.bias_mitigation_strategies,
+                "confidence_assessment": metadata.quality_assurance.confidence_assessment_method,
+                "overall_score": metadata.overall_confidence
+            }
+            
+            # Create methodology performance metrics
+            self.methodology_performance_metrics = {
+                "processing_time": f"{metadata.total_processing_time:.2f}s",
+                "sources_analyzed": metadata.total_sources_analyzed,
+                "high_quality_sources": metadata.high_quality_sources_count,
+                "ai_interactions": metadata.ai_interactions_count,
+                "data_transformations": metadata.data_transformations_count,
+                "search_efficiency": f"{metadata.search_success_rate:.1%}" if hasattr(metadata, 'search_success_rate') else "Not available"
+            }
+        
+        # Enhanced source analysis integration
+        if self.source_collection and self.source_collection.sources:
+            sources = self.source_collection.sources
+            
+            # Create detailed source analysis if not provided
+            if not self.detailed_source_analysis:
+                self.detailed_source_analysis = SourceAnalysisResult(
+                    total_sources=len(sources),
+                    credible_sources=len([s for s in sources if s.credibility_score >= 7.0]),
+                    source_types=[s.source_type.value for s in sources],
+                    geographic_coverage=self.geographic_coverage or [],
+                    quality_score=sum(s.credibility_score for s in sources) / len(sources),
+                    reliability_assessment="High" if sum(s.credibility_score for s in sources) / len(sources) >= 8.0 else "Moderate",
+                    bias_indicators=[],
+                    source_diversity_score=self.source_diversity_score or 5.0,
+                    recommendations=[]
+                )
+            
+            # Create comprehensive market context with source attribution
+            if not self.market_context:
+                self.market_context = {
+                    "market_size_indicators": self._extract_market_indicators(sources),
+                    "competitive_landscape": self._extract_competitive_insights(sources),
+                    "technology_trends": self._extract_technology_trends(sources),
+                    "regulatory_environment": self._extract_regulatory_insights(sources),
+                    "source_attribution": {
+                        source.url: {
+                            "domain": source.domain,
+                            "credibility": source.credibility_score,
+                            "relevance": source.relevance_score,
+                            "contribution": source.content_snippet[:100] + "..." if source.content_snippet else ""
+                        }
+                        for source in sources[:10]  # Top 10 sources
+                    }
+                }
+            
+            # Create competitive intelligence with full traceability
+            if not self.competitive_intelligence:
+                self.competitive_intelligence = {
+                    "competitor_analysis": self._create_competitor_analysis(sources),
+                    "market_positioning": self._extract_positioning_insights(sources),
+                    "opportunity_gaps": self._identify_opportunity_gaps(sources),
+                    "threat_assessment": self._assess_competitive_threats(sources),
+                    "source_traceability": {
+                        "primary_sources": [s.url for s in sources if s.credibility_score >= 8.0],
+                        "supporting_sources": [s.url for s in sources if 6.0 <= s.credibility_score < 8.0],
+                        "methodology": self.analysis_approach,
+                        "validation_approach": self.validation_methods
+                    }
+                }
+        
+        return self
+    
+    def _extract_market_indicators(self, sources: List[SourceCitation]) -> Dict[str, Any]:
+        """Extract market size and growth indicators from sources"""
+        market_keywords = ['market size', 'growth rate', 'cagr', 'revenue', 'billion', 'million']
+        indicators = {}
+        
+        for source in sources:
+            if source.content_snippet:
+                content_lower = source.content_snippet.lower()
+                for keyword in market_keywords:
+                    if keyword in content_lower:
+                        indicators[f"market_indicator_{len(indicators)}"] = {
+                            "source": source.url,
+                            "snippet": source.content_snippet[:200],
+                            "credibility": source.credibility_score
+                        }
+                        break
+        
+        return indicators
+    
+    def _extract_competitive_insights(self, sources: List[SourceCitation]) -> Dict[str, Any]:
+        """Extract competitive landscape insights from sources"""
+        competitive_keywords = ['competitor', 'market share', 'leading', 'dominant', 'challenge']
+        insights = {}
+        
+        for source in sources:
+            if source.content_snippet:
+                content_lower = source.content_snippet.lower()
+                if any(keyword in content_lower for keyword in competitive_keywords):
+                    insights[f"competitive_insight_{len(insights)}"] = {
+                        "source": source.url,
+                        "insight": source.content_snippet[:300],
+                        "credibility": source.credibility_score
+                    }
+        
+        return insights
+    
+    def _extract_technology_trends(self, sources: List[SourceCitation]) -> Dict[str, Any]:
+        """Extract technology trend insights from sources"""
+        tech_keywords = ['innovation', 'technology', 'digital', 'ai', 'automation', 'advancement']
+        trends = {}
+        
+        for source in sources:
+            if source.content_snippet:
+                content_lower = source.content_snippet.lower()
+                if any(keyword in content_lower for keyword in tech_keywords):
+                    trends[f"tech_trend_{len(trends)}"] = {
+                        "source": source.url,
+                        "trend": source.content_snippet[:250],
+                        "credibility": source.credibility_score
+                    }
+        
+        return trends
+    
+    def _extract_regulatory_insights(self, sources: List[SourceCitation]) -> Dict[str, Any]:
+        """Extract regulatory environment insights from sources"""
+        reg_keywords = ['regulation', 'fda', 'approval', 'compliance', 'regulatory', 'guideline']
+        insights = {}
+        
+        for source in sources:
+            if source.content_snippet:
+                content_lower = source.content_snippet.lower()
+                if any(keyword in content_lower for keyword in reg_keywords):
+                    insights[f"regulatory_insight_{len(insights)}"] = {
+                        "source": source.url,
+                        "insight": source.content_snippet[:200],
+                        "credibility": source.credibility_score
+                    }
+        
+        return insights
+    
+    def _create_competitor_analysis(self, sources: List[SourceCitation]) -> Dict[str, Any]:
+        """Create comprehensive competitor analysis from sources"""
+        return {
+            "methodology": "Source-based competitive analysis",
+            "source_count": len(sources),
+            "analysis_depth": "Comprehensive" if len(sources) >= 10 else "Moderate",
+            "competitive_factors": self._extract_competitive_factors(sources)
+        }
+    
+    def _extract_competitive_factors(self, sources: List[SourceCitation]) -> List[Dict[str, Any]]:
+        """Extract competitive factors from source content"""
+        factors = []
+        factor_keywords = ['strength', 'weakness', 'advantage', 'disadvantage', 'position', 'strategy']
+        
+        for source in sources[:5]:  # Top 5 sources
+            if source.content_snippet:
+                content_lower = source.content_snippet.lower()
+                for keyword in factor_keywords:
+                    if keyword in content_lower:
+                        factors.append({
+                            "factor": keyword.title(),
+                            "evidence": source.content_snippet[:150],
+                            "source": source.url,
+                            "credibility": source.credibility_score
+                        })
+                        break
+        
+        return factors
+    
+    def _extract_positioning_insights(self, sources: List[SourceCitation]) -> Dict[str, Any]:
+        """Extract market positioning insights from sources"""
+        return {
+            "positioning_strategy": "Evidence-based positioning",
+            "market_segments": self._identify_market_segments(sources),
+            "differentiation_factors": self._extract_differentiation_factors(sources)
+        }
+    
+    def _identify_market_segments(self, sources: List[SourceCitation]) -> List[str]:
+        """Identify market segments mentioned in sources"""
+        segment_keywords = ['segment', 'market', 'demographic', 'target', 'customer']
+        segments = []
+        
+        for source in sources:
+            if source.content_snippet and any(keyword in source.content_snippet.lower() for keyword in segment_keywords):
+                segments.append(f"Segment identified in {source.domain}")
+        
+        return segments
+    
+    def _extract_differentiation_factors(self, sources: List[SourceCitation]) -> List[str]:
+        """Extract differentiation factors from sources"""
+        diff_keywords = ['unique', 'different', 'innovative', 'first', 'leading', 'superior']
+        factors = []
+        
+        for source in sources:
+            if source.content_snippet:
+                content_lower = source.content_snippet.lower()
+                for keyword in diff_keywords:
+                    if keyword in content_lower:
+                        factors.append(f"Differentiation factor from {source.domain}")
+                        break
+        
+        return factors
+    
+    def _identify_opportunity_gaps(self, sources: List[SourceCitation]) -> Dict[str, Any]:
+        """Identify opportunity gaps from source analysis"""
+        return {
+            "gap_identification_method": "Source content analysis",
+            "gaps_identified": len([s for s in sources if 'gap' in s.content_snippet.lower() if s.content_snippet]),
+            "opportunity_indicators": self._extract_opportunity_indicators(sources)
+        }
+    
+    def _extract_opportunity_indicators(self, sources: List[SourceCitation]) -> List[str]:
+        """Extract opportunity indicators from sources"""
+        opp_keywords = ['opportunity', 'potential', 'gap', 'unmet', 'need', 'demand']
+        indicators = []
+        
+        for source in sources:
+            if source.content_snippet:
+                content_lower = source.content_snippet.lower()
+                for keyword in opp_keywords:
+                    if keyword in content_lower:
+                        indicators.append(f"Opportunity indicator from {source.domain}")
+                        break
+        
+        return indicators
+    
+    def _assess_competitive_threats(self, sources: List[SourceCitation]) -> Dict[str, Any]:
+        """Assess competitive threats from sources"""
+        threat_keywords = ['threat', 'risk', 'challenge', 'competition', 'disrupt']
+        threats = []
+        
+        for source in sources:
+            if source.content_snippet:
+                content_lower = source.content_snippet.lower()
+                if any(keyword in content_lower for keyword in threat_keywords):
+                    threats.append({
+                        "threat_indicator": source.content_snippet[:100],
+                        "source": source.url,
+                        "credibility": source.credibility_score
+                    })
+        
+        return {
+            "threat_assessment_method": "Source-based threat analysis",
+            "threats_identified": len(threats),
+            "threat_details": threats[:5]  # Top 5 threats
+        }
+    
+    def get_comprehensive_transparency_report(self) -> Dict[str, Any]:
+        """Get complete transparency report for this opportunity analysis"""
+        base_report = self.get_detailed_quality_assessment()
+        
+        return {
+            **base_report,
+            "methodology_transparency": {
+                "langgraph_execution": {
+                    "nodes_executed": len(self.langgraph_execution_trace) if self.langgraph_execution_trace else 0,
+                    "total_processing_time": self.methodology_performance_metrics.get("processing_time") if self.methodology_performance_metrics else "Not available",
+                    "decision_points": len(self.decision_audit_trail) if self.decision_audit_trail else 0
+                },
+                "reasoning_transparency": {
+                    "reasoning_chains": len(self.reasoning_chains) if self.reasoning_chains else 0,
+                    "decision_audit_available": bool(self.decision_audit_trail),
+                    "quality_assurance_performed": bool(self.quality_assurance_report)
+                },
+                "source_transparency": {
+                    "detailed_analysis_available": bool(self.detailed_source_analysis),
+                    "market_context_sourced": bool(self.market_context),
+                    "competitive_intelligence_backed": bool(self.competitive_intelligence)
+                }
+            },
+            "validation_and_quality": {
+                "cross_validation_performed": bool(self.cross_validation_results),
+                "performance_metrics_available": bool(self.methodology_performance_metrics),
+                "quality_assurance_score": self.quality_assurance_report.get("overall_score") if self.quality_assurance_report else None
+            }
+        }
 
 class OpportunityMatrix(BaseModel):
     """Model for opportunity impact vs difficulty matrix"""

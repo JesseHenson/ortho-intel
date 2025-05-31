@@ -118,4 +118,92 @@ Transform the existing multi-category medical device competitive intelligence pl
 - **Rollback Plan**: Maintain single-tenant fallback mode
 - **Monitoring**: Real-time performance and security monitoring
 
-This PRD defines the requirements for transforming the orthopedic competitive intelligence platform from a working MVP into an enterprise-grade SaaS solution that marketing firms can use for comprehensive competitive intelligence operations. 
+This PRD defines the requirements for transforming the orthopedic competitive intelligence platform from a working MVP into an enterprise-grade SaaS solution that marketing firms can use for comprehensive competitive intelligence operations.
+
+# Progressive Disclosure Detail Enhancement PRD
+
+## Project Overview
+Enhance the progressive disclosure system in the orthopedic competitive intelligence platform to provide comprehensive detail information that clearly explains how agents retrieved and analyzed data, what information they obtained, and why it's important.
+
+## Current Issues
+1. **Source Data Disconnect**: The sources displayed in the progressive disclosure system appear to be generic/demo data rather than actual Tavily research sources
+2. **Insufficient Detail Information**: The detail view doesn't provide a clear picture of how agents retrieved and analyzed information
+3. **Missing Analysis Transparency**: Users can't understand what data was retrieved, how it was analyzed, and why conclusions were reached
+4. **Poor Source Traceability**: No clear connection between Tavily search results and the displayed opportunities
+
+## Requirements
+
+### 1. Data Flow Transparency
+- **Requirement**: Create clear traceability from Tavily search queries → raw results → analysis → opportunities
+- **Acceptance Criteria**: Users can see the complete data flow from search to final recommendations
+- **Priority**: High
+
+### 2. Enhanced Detail Information
+- **Requirement**: Detail view must explain what data agents retrieved, how they analyzed it, what information they got, and why it's important
+- **Acceptance Criteria**: 
+  - Show specific search queries used
+  - Display raw data snippets that led to conclusions
+  - Explain analysis methodology
+  - Justify why findings are important
+- **Priority**: High
+
+### 3. Real Source Integration
+- **Requirement**: Replace demo/generic sources with actual Tavily research sources
+- **Acceptance Criteria**: 
+  - Source URLs match actual Tavily search results
+  - Source titles and snippets reflect real research data
+  - Credibility indicators based on actual domains
+- **Priority**: High
+
+### 4. Analysis Methodology Disclosure
+- **Requirement**: Provide detailed explanation of how AI agents processed the data
+- **Acceptance Criteria**:
+  - Show which LangGraph nodes processed what data
+  - Explain transformation from raw research to opportunities
+  - Display confidence scores and reasoning
+- **Priority**: Medium
+
+### 5. Progressive Disclosure Enhancement
+- **Requirement**: Improve the three-tier disclosure system with better data connections
+- **Acceptance Criteria**:
+  - Summary level shows key metrics from real data
+  - Detail level shows analysis process and methodology
+  - Full level shows complete source analysis and raw data
+- **Priority**: Medium
+
+## Technical Requirements
+
+### Backend Enhancements
+- Modify LangGraph nodes to capture and preserve source metadata
+- Enhance opportunity generation to maintain source traceability
+- Create new API endpoints for detailed analysis information
+- Implement source analysis and credibility scoring
+
+### Frontend Enhancements
+- Update progressive disclosure components to display real source data
+- Add analysis methodology visualization
+- Implement data flow diagrams for user understanding
+- Enhance source citation system with real credibility analysis
+
+### Data Models
+- Extend opportunity models to include detailed analysis metadata
+- Create source analysis result models
+- Implement analysis methodology tracking
+- Add confidence and credibility scoring models
+
+## Success Metrics
+- Users can trace any opportunity back to its source data
+- Detail information provides clear understanding of analysis process
+- Source credibility indicators reflect actual research quality
+- Analysis methodology is transparent and understandable
+
+## Timeline
+- Phase 1: Information gathering and system analysis (1 week)
+- Phase 2: Backend data flow enhancements (2 weeks)
+- Phase 3: Frontend progressive disclosure improvements (2 weeks)
+- Phase 4: Testing and bug fixes (1 week)
+
+## Stakeholders
+- Marketing professionals using the platform
+- Development team implementing enhancements
+- End users requiring transparent competitive intelligence 
