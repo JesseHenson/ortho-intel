@@ -1,11 +1,19 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
+// Import debug helpers (makes them available as window.debug)
+import './utils/debugHelpers';
+
 // Components
 import Header from './components/Header';
 import Dashboard from './pages/Dashboard';
 import AnalysisPage from './pages/AnalysisPage';
 import ResultsPage from './pages/ResultsPage';
+import CompetitorFinderPage from './pages/CompetitorFinderPage';
+import FocusAreaPage from './pages/FocusAreaPage';
+import StreamingTestPage from './pages/StreamingTestPage';
+import StreamingTest from './components/StreamingTest';
+import CachedStreamingTest from './components/CachedStreamingTest';
 import ErrorBoundary from './components/ErrorBoundary';
 
 import './App.css';
@@ -33,6 +41,11 @@ function App() {
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/analysis" element={<AnalysisPage />} />
                 <Route path="/results/:analysisId" element={<ResultsPage />} />
+                <Route path="/competitors" element={<CompetitorFinderPage />} />
+                <Route path="/focus-areas" element={<FocusAreaPage />} />
+                <Route path="/streaming-test" element={<StreamingTestPage />} />
+                <Route path="/streaming-improved" element={<StreamingTest />} />
+                <Route path="/cached-streaming" element={<CachedStreamingTest />} />
               </Routes>
             </main>
           </div>

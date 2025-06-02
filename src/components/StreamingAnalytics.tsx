@@ -28,13 +28,15 @@ export interface StreamingAnalyticsProps {
   isRunning: boolean;
   insights?: StreamingInsight[];
   onInsightClick?: (insight: StreamingInsight) => void;
+  onComplete?: () => void;
 }
 
 const StreamingAnalytics: React.FC<StreamingAnalyticsProps> = ({
   analysisId,
   isRunning,
   insights = [],
-  onInsightClick
+  onInsightClick,
+  onComplete
 }) => {
   const [displayedInsights, setDisplayedInsights] = useState<StreamingInsight[]>([]);
   const [animatingInsight, setAnimatingInsight] = useState<string | null>(null);
@@ -93,13 +95,18 @@ const StreamingAnalytics: React.FC<StreamingAnalyticsProps> = ({
         setTimeout(() => setAnimatingInsight(null), 500);
         
         currentIndex++;
+        
+        // Call onComplete when finished
+        if (currentIndex === mockInsights.length && onComplete) {
+          setTimeout(onComplete, 1000);
+        }
       } else {
         clearInterval(interval);
       }
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [isRunning]);
+  }, [isRunning, onComplete]);
 
   const getInsightIcon = (type: StreamingInsight['type']) => {
     switch (type) {

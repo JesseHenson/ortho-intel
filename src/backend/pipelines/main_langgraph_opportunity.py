@@ -87,7 +87,17 @@ class OpportunityIntelligenceGraph:
         # Define workflow edges
         workflow.add_edge("detect_category", "initialize")
         workflow.add_edge("initialize", "research_competitor")
-        workflow.add_edge("research_competitor", "analyze_competitive_gaps")
+        
+        # Add conditional edge for research completion
+        workflow.add_conditional_edges(
+            "research_competitor",
+            self._should_continue_research,
+            {
+                "continue": "research_competitor",
+                "analyze": "analyze_competitive_gaps"
+            }
+        )
+        
         workflow.add_edge("analyze_competitive_gaps", "generate_opportunities")
         workflow.add_edge("generate_opportunities", "categorize_opportunities")
         workflow.add_edge("categorize_opportunities", "synthesize_opportunity_report")
@@ -95,6 +105,28 @@ class OpportunityIntelligenceGraph:
         
         # Compile and return
         return workflow.compile()
+    
+    def _should_continue_research(self, state: GraphState) -> str:
+        """Determine if research should continue or move to analysis"""
+        competitors = state["competitors"]
+        current_competitor = state.get("current_competitor", "")
+        research_iteration = state.get("research_iteration", 0)
+        
+        # If no current competitor, we're done
+        if not current_competitor:
+            return "analyze"
+        
+        # If we've done enough iterations, move to next competitor or finish
+        if research_iteration >= 4:  # Max 4 searches per competitor
+            current_idx = competitors.index(current_competitor) if current_competitor in competitors else len(competitors)
+            if current_idx >= len(competitors) - 1:
+                # Done with all competitors
+                return "analyze"
+            # Move to next competitor (this will be handled in research_competitor)
+            return "continue"
+        
+        # Continue with current competitor
+        return "continue"
     
     def detect_category(self, state: GraphState) -> Dict[str, Any]:
         """Detect device category based on competitors and context"""
@@ -187,6 +219,7 @@ class OpportunityIntelligenceGraph:
         competitors = state["competitors"]
         iteration = state["research_iteration"]
         existing_results = state["raw_research_results"]
+        research_enabled = state.get("research_enabled", True)  # Default to True for backward compatibility
         
         # Initialize enhanced source metadata if not present
         if "enhanced_source_metadata" not in state:
@@ -195,11 +228,40 @@ class OpportunityIntelligenceGraph:
         # Start node execution tracking
         node_execution = self.methodology_tracker.start_node_execution(
             node_name="research_competitor",
-            input_summary=f"Competitor: {current_competitor}, Iteration: {iteration}, Existing results: {len(existing_results)}"
+            input_summary=f"Competitor: {current_competitor}, Iteration: {iteration}, Existing results: {len(existing_results)}, Research: {research_enabled}"
         )
         
-        print(f"📊 Researching {current_competitor} (iteration {iteration + 1})")
+        print(f"📊 Researching {current_competitor} (iteration {iteration + 1}) - Research enabled: {research_enabled}")
         
+        # If research is disabled, skip actual research and use mock/minimal data
+        if not research_enabled:
+            print(f"   ⚡ Research disabled - using basic analysis for {current_competitor}")
+            
+            # Create minimal mock research result for basic analysis
+            mock_result = {
+                "competitor": current_competitor,
+                "query": f"basic analysis {current_competitor}",
+                "url": f"https://example.com/{current_competitor.lower().replace(' ', '-')}",
+                "title": f"Basic Analysis - {current_competitor}",
+                "content": f"Basic competitive analysis for {current_competitor} without external research.",
+                "score": 0.5
+            }
+            
+            existing_results.append(mock_result)
+            
+            # Complete node execution for basic mode
+            self.methodology_tracker.complete_node_execution(
+                node_execution=node_execution,
+                output_summary=f"Basic analysis completed for {current_competitor} (research disabled)",
+                transformations=[f"Generated basic analysis data for {current_competitor}"],
+                warnings=["Research mode disabled - using basic analysis"],
+                success_indicators=[f"Basic analysis data created for {current_competitor}"]
+            )
+            
+            # Advance to next competitor or analysis phase
+            return self._advance_research_state(state, competitors, current_competitor, existing_results, iteration)
+        
+        # Continue with full research if enabled
         try:
             # Generate competitor-specific query using detected category
             device_category = state["device_category"]
@@ -322,9 +384,10 @@ class OpportunityIntelligenceGraph:
                     "research_iteration": 0
                 })
             else:
-                # Done with all competitors
+                # Done with all competitors - signal completion
                 state.update({
                     "raw_research_results": existing_results,
+                    "current_competitor": "",  # Empty signals completion
                     "research_iteration": next_iteration
                 })
         else:
@@ -932,21 +995,27 @@ class OpportunityIntelligenceGraph:
         
         return OpportunityMatrix(**matrix_data)
     
-    def run_analysis(self, competitors: List[str], focus_area: str = "spine_fusion") -> Dict[str, Any]:
-        """Run the complete opportunity-first competitive intelligence analysis"""
-        print(f"\n🔍 Starting opportunity-first analysis for {len(competitors)} competitors in {focus_area}")
+    def run_analysis(self, competitors: List[str], focus_area: str = "spine_fusion", research_enabled: bool = True) -> Dict[str, Any]:
+        """Run the complete opportunity-first competitive analysis with optional research"""
+        print(f"🚀 Starting opportunity-first analysis...")
+        print(f"   Competitors: {competitors}")
+        print(f"   Focus area: {focus_area}")
+        print(f"   Research enabled: {research_enabled}")
         
+        # Initialize state with research flag
         initial_state = {
             "competitors": competitors,
             "focus_area": focus_area,
-            "current_competitor_index": 0,
-            "research_iteration": 1,
+            "device_category": "",
+            "search_queries": [],
             "raw_research_results": [],
-            "enhanced_source_metadata": [],
             "clinical_gaps": [],
-            "market_share_insights": [],
-            "top_opportunities": [],
-            "error_messages": []
+            "market_opportunities": [],
+            "current_competitor": None,
+            "research_iteration": 0,
+            "error_messages": [],
+            "final_report": None,
+            "research_enabled": research_enabled  # Add research flag to state
         }
         
         # Use the compiled graph to process
@@ -1017,6 +1086,92 @@ class OpportunityIntelligenceGraph:
                 competitive_advantage="Market leadership in ASC segment"
             )
         ]
+
+    def transform_to_result_format(self, final_state: Dict[str, Any]) -> Dict[str, Any]:
+        """Transform LangGraph final state to frontend-expected result format"""
+        
+        # Extract data from final state
+        final_report = final_state.get("final_report", {})
+        competitors = final_state.get("competitors", [])
+        clinical_gaps = final_state.get("clinical_gaps", [])
+        market_opportunities = final_state.get("raw_market_opportunities", [])
+        market_insights = final_state.get("raw_market_insights", [])
+        top_opportunities = final_state.get("top_opportunities", [])
+        
+        # Get methodology data directly from final_state
+        comprehensive_methodology_data = final_state.get("comprehensive_methodology", {})
+        methodology_transparency_report_data = final_state.get("methodology_transparency_report", {})
+
+        # Create executive summary from available data
+        exec_summary = final_report.get("executive_summary", {})
+        summary_text = exec_summary.get("key_insight") or final_report.get("analysis_summary") or "Comprehensive competitive intelligence analysis completed."
+        
+        executive_summary = {
+            "key_insight": summary_text,
+            "strategic_recommendations": exec_summary.get("strategic_recommendations", [
+                "Focus on identified market gaps and clinical needs",
+                "Leverage competitor weaknesses to gain market share",
+                "Develop differentiated product positioning",
+                "Consider strategic partnerships for market entry"
+            ])
+        }
+        
+        # Use existing top_opportunities or create from market_opportunities
+        formatted_opportunities = []
+        if top_opportunities:
+            formatted_opportunities = top_opportunities
+        elif market_opportunities:
+            for i, opp in enumerate(market_opportunities[:5]):
+                if isinstance(opp, dict):
+                    formatted_opp = {
+                        "id": i + 1,
+                        "title": opp.get("opportunity_type", f"Market Opportunity {i+1}").replace("_", " ").title(),
+                        "description": opp.get("description", "Strategic opportunity identified through competitive analysis."),
+                        "opportunity_score": min(9.0, 7.0 + (i * 0.3)),
+                        "time_to_market": "6-12 months",
+                        "evidence": opp.get("evidence", "Based on competitive analysis and market research."),
+                        "next_steps": [
+                            "Conduct detailed market validation",
+                            "Assess technical feasibility", 
+                            "Develop business case",
+                            "Create go-to-market strategy"
+                        ]
+                    }
+                    formatted_opportunities.append(formatted_opp)
+        
+        # Calculate confidence score
+        # Use comprehensive_methodology_data obtained directly from final_state
+        confidence_score = comprehensive_methodology_data.get("overall_confidence", 8.0)
+        
+        # Build result in expected format with comprehensive data
+        result = {
+            "executive_summary": executive_summary,
+            "top_opportunities": formatted_opportunities,
+            "confidence_score": confidence_score,
+            "metadata": {
+                "total_sources": comprehensive_methodology_data.get("total_sources_analyzed", 0),
+                "competitors_analyzed": len(competitors),
+                "analysis_duration": comprehensive_methodology_data.get("total_processing_time", "Real-time"),
+                "timestamp": final_report.get("research_timestamp", "2025-05-25"), # Can eventually get from comprehensive_methodology_data
+                "clinical_gaps_found": len(clinical_gaps),
+                "market_insights_generated": len(market_insights)
+            },
+            # Include ALL the rich data we've been missing
+            "raw_clinical_gaps": clinical_gaps,
+            "raw_market_opportunities": market_opportunities, # This was correctly raw
+            "raw_market_insights": market_insights, # This was correctly raw
+            "analysis_summary": summary_text, # This is fine from final_report
+            # Include comprehensive methodology and traceability directly from final_state
+            "comprehensive_methodology": comprehensive_methodology_data,
+            "methodology_transparency_report": methodology_transparency_report_data,
+            # Also include other raw data points from final_state for completeness
+            "search_queries": final_state.get("search_queries", []),
+            "raw_research_results": final_state.get("raw_research_results", []),
+            "market_share_insights": final_state.get("market_share_insights", []), # This might be different from raw_market_insights
+            "competitive_profiles": final_state.get("competitive_profiles", {})
+        }
+        
+        return result
 
 # Create global instance
 opportunity_graph = OpportunityIntelligenceGraph() 

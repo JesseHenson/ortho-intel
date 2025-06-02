@@ -2,130 +2,140 @@ import React, { useState, useEffect } from 'react';
 import { 
   Search, 
   TrendingUp, 
-  AlertCircle, 
   CheckCircle, 
-  Clock, 
   ExternalLink,
   Brain,
   Target,
   FileText,
-  Lightbulb
+  Lightbulb,
+  AlertCircle,
+  Zap,
+  Activity
 } from 'lucide-react';
+import { useStreamingAnalysis } from '../hooks/useStreamingAnalysis';
 
 export interface StreamingInsight {
   id: string;
-  type: 'source_discovery' | 'market_insight' | 'competitive_gap' | 'opportunity_identified';
+  type: 'source_discovery' | 'market_insight' | 'competitive_gap' | 'opportunity_identified' | 'node_execution' | 'search_progress';
   title: string;
   content: string;
   source_url?: string;
   credibility_score?: number;
   timestamp: string;
   relevance_score?: number;
+  confidence_score?: number;
 }
 
 export interface StreamingAnalyticsProps {
   analysisId: string;
-  isRunning: boolean;
+  isRunning?: boolean;
   insights?: StreamingInsight[];
   onInsightClick?: (insight: StreamingInsight) => void;
 }
 
 const StreamingAnalytics: React.FC<StreamingAnalyticsProps> = ({
   analysisId,
-  isRunning,
-  insights = [],
+  isRunning: propIsRunning,
   onInsightClick
 }) => {
   const [displayedInsights, setDisplayedInsights] = useState<StreamingInsight[]>([]);
   const [animatingInsight, setAnimatingInsight] = useState<string | null>(null);
-  const [hasShownDemo, setHasShownDemo] = useState(false);
 
-  // Mock streaming insights for demonstration
-  const mockInsights: StreamingInsight[] = [
-    {
-      id: '1',
-      type: 'source_discovery',
-      title: 'Key Source Discovered',
-      content: 'Found comprehensive market analysis on spine fusion trends from leading orthopedic journal',
-      source_url: 'https://example.com/orthopedic-research',
-      credibility_score: 9.2,
-      timestamp: new Date().toISOString(),
-      relevance_score: 8.8
-    },
-    {
-      id: '2',
-      type: 'competitive_gap',
-      title: 'Competitive Gap Identified',
-      content: 'Stryker Spine shows complications with rhBMP products in cervical fusion procedures',
-      timestamp: new Date(Date.now() + 3000).toISOString(),
-      relevance_score: 9.1
-    },
-    {
-      id: '3',
-      type: 'market_insight',
-      title: 'Market Trend Analysis',
-      content: 'Growing demand for enhanced biologics due to safety concerns with current products',
-      timestamp: new Date(Date.now() + 6000).toISOString(),
-      relevance_score: 8.7
-    },
-    {
-      id: '4',
-      type: 'opportunity_identified',
-      title: 'Strategic Opportunity',
-      content: 'Development of enhanced biologics for safer spinal fusion procedures',
-      timestamp: new Date(Date.now() + 9000).toISOString(),
-      relevance_score: 9.3
-    }
-  ];
+  // Use real streaming hook
+  const {
+    isConnected,
+    isRunning: streamingIsRunning,
+    events,
+    latestEvent,
+    progress,
+    currentMessage,
+    error
+  } = useStreamingAnalysis(analysisId, true);
 
-  // Simulate real-time streaming for demonstration
+  // Use streaming state or prop fallback
+  const isAnalysisRunning = streamingIsRunning || propIsRunning || false;
+
+  // Convert streaming events to insights
   useEffect(() => {
-    // Show insights if running or if we haven't shown the demo yet
-    if (!isRunning && hasShownDemo) return;
+    if (!latestEvent?.type) return;
 
-    // Reset if new analysis
-    if (isRunning) {
-      setDisplayedInsights([]);
-      setHasShownDemo(false);
+    const event = latestEvent;
+    let newInsight: StreamingInsight | null = null;
+
+    switch (event.type) {
+      case 'source_found':
+        newInsight = {
+          id: `source-${Date.now()}`,
+          type: 'source_discovery',
+          title: 'Key Source Discovered',
+          content: event.message || 'Found relevant competitive intelligence source',
+          timestamp: event.timestamp || new Date().toISOString(),
+          credibility_score: 8.5,
+          relevance_score: 8.5
+        };
+        break;
+
+      case 'insight_discovered':
+        newInsight = {
+          id: `insight-${Date.now()}`,
+          type: 'market_insight',
+          title: 'Strategic Insight Discovered',
+          content: event.message || 'New competitive insight identified',
+          timestamp: event.timestamp || new Date().toISOString(),
+          confidence_score: 8.0
+        };
+        break;
+
+      case 'opportunity_generated':
+        newInsight = {
+          id: `opportunity-${Date.now()}`,
+          type: 'opportunity_identified',
+          title: 'Strategic Opportunity',
+          content: event.message || 'Strategic opportunity identified',
+          timestamp: event.timestamp || new Date().toISOString(),
+          confidence_score: 8.0
+        };
+        break;
+
+      case 'node_started':
+      case 'node_completed':
+      case 'node_execution':
+        newInsight = {
+          id: `node-${Date.now()}`,
+          type: 'node_execution',
+          title: 'Analysis Step',
+          content: event.message || 'Executing analysis step',
+          timestamp: event.timestamp || new Date().toISOString()
+        };
+        break;
+
+      case 'search_started':
+      case 'search_progress':
+        newInsight = {
+          id: `search-${Date.now()}`,
+          type: 'search_progress',
+          title: 'Researching Competitor',
+          content: event.message || 'Analyzing competitive data',
+          timestamp: event.timestamp || new Date().toISOString()
+        };
+        break;
     }
 
-    let currentIndex = 0;
-    
-    // Start immediately with the first insight
-    const showNextInsight = () => {
-      if (currentIndex < mockInsights.length) {
-        const newInsight = mockInsights[currentIndex];
-        setAnimatingInsight(newInsight.id);
-        
-        setDisplayedInsights(prev => [...prev, newInsight]);
-        
-        // Remove animation after a short delay
-        setTimeout(() => setAnimatingInsight(null), 500);
-        
-        currentIndex++;
-        
-        // Mark demo as shown when complete
-        if (currentIndex >= mockInsights.length) {
-          setHasShownDemo(true);
-        }
-      }
-    };
-
-    // Show first insight immediately, then continue with interval
-    if (isRunning && currentIndex === 0) {
-      showNextInsight();
-    }
-
-    const interval = setInterval(() => {
-      showNextInsight();
+    if (newInsight) {
+      setAnimatingInsight(newInsight.id);
+      setDisplayedInsights(prev => [...prev, newInsight!]);
       
-      if (currentIndex >= mockInsights.length) {
-        clearInterval(interval);
-      }
-    }, 3000);
+      // Remove animation after a short delay
+      setTimeout(() => setAnimatingInsight(null), 500);
+    }
+  }, [latestEvent]);
 
-    return () => clearInterval(interval);
-  }, [isRunning, hasShownDemo]);
+  // Reset insights when analysis starts
+  useEffect(() => {
+    if (isAnalysisRunning && events.length === 0) {
+      setDisplayedInsights([]);
+    }
+  }, [isAnalysisRunning, events.length]);
 
   const getInsightIcon = (type: StreamingInsight['type']) => {
     switch (type) {
@@ -137,6 +147,10 @@ const StreamingAnalytics: React.FC<StreamingAnalyticsProps> = ({
         return <Target className="w-5 h-5 text-red-600" />;
       case 'opportunity_identified':
         return <Lightbulb className="w-5 h-5 text-yellow-600" />;
+      case 'node_execution':
+        return <Zap className="w-5 h-5 text-purple-600" />;
+      case 'search_progress':
+        return <Search className="w-5 h-5 text-indigo-600" />;
       default:
         return <Brain className="w-5 h-5 text-gray-600" />;
     }
@@ -152,13 +166,17 @@ const StreamingAnalytics: React.FC<StreamingAnalyticsProps> = ({
         return 'border-red-200 bg-red-50';
       case 'opportunity_identified':
         return 'border-yellow-200 bg-yellow-50';
+      case 'node_execution':
+        return 'border-purple-200 bg-purple-50';
+      case 'search_progress':
+        return 'border-indigo-200 bg-indigo-50';
       default:
         return 'border-gray-200 bg-gray-50';
     }
   };
 
   // Don't show if not running and no insights to display
-  if (!isRunning && displayedInsights.length === 0) {
+  if (!isAnalysisRunning && displayedInsights.length === 0) {
     return null;
   }
 
@@ -168,27 +186,64 @@ const StreamingAnalytics: React.FC<StreamingAnalyticsProps> = ({
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold text-gray-900 flex items-center">
             <Brain className="w-5 h-5 mr-2 text-primary-600" />
-            {isRunning ? 'Live Analysis Insights' : 'Recent Analysis Insights'}
+            {isAnalysisRunning ? 'Live Analysis Insights' : 'Recent Analysis Insights'}
           </h2>
-          {isRunning ? (
-            <div className="flex items-center space-x-2 text-sm text-blue-600">
-              <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
-              <span>Analyzing in real-time</span>
-            </div>
-          ) : (
-            <div className="flex items-center space-x-2 text-sm text-green-600">
-              <CheckCircle className="w-4 h-4" />
-              <span>Analysis insights</span>
-            </div>
-          )}
+          <div className="flex items-center space-x-4">
+            {/* Connection Status */}
+            {isAnalysisRunning && (
+              <div className={`flex items-center space-x-2 text-sm ${isConnected ? 'text-green-600' : 'text-red-600'}`}>
+                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-600 animate-pulse' : 'bg-red-600'}`}></div>
+                <span>{isConnected ? 'Connected' : 'Disconnected'}</span>
+              </div>
+            )}
+            
+            {/* Analysis Status */}
+            {isAnalysisRunning ? (
+              <div className="flex items-center space-x-2 text-sm text-blue-600">
+                <Activity className="w-4 h-4" />
+                <span>Analyzing in real-time</span>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-2 text-sm text-green-600">
+                <CheckCircle className="w-4 h-4" />
+                <span>Analysis insights</span>
+              </div>
+            )}
+          </div>
         </div>
+        
+        {/* Progress Bar */}
+        {isAnalysisRunning && progress > 0 && (
+          <div className="mt-3">
+            <div className="flex justify-between text-sm text-gray-600 mb-1">
+              <span>{currentMessage || 'Processing...'}</span>
+              <span>{Math.round(progress)}%</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div 
+                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${progress}%` }}
+              ></div>
+            </div>
+          </div>
+        )}
+
+        {/* Error Display */}
+        {error && (
+          <div className="mt-3 flex items-center space-x-2 text-sm text-red-600 bg-red-50 p-2 rounded">
+            <AlertCircle className="w-4 h-4" />
+            <span>{error}</span>
+          </div>
+        )}
       </div>
       
       <div className="p-6">
-        {isRunning && displayedInsights.length === 0 ? (
+        {isAnalysisRunning && displayedInsights.length === 0 ? (
           <div className="text-center py-8">
             <Search className="w-12 h-12 text-gray-400 mx-auto mb-4 animate-pulse" />
-            <p className="text-gray-600 mb-2">Initializing competitive intelligence scan...</p>
+            <p className="text-gray-600 mb-2">
+              {isConnected ? 'Initializing competitive intelligence scan...' : 'Connecting to analysis stream...'}
+            </p>
             <p className="text-sm text-gray-500">
               <span className="inline-block animate-bounce">🔍</span> Scanning market data 
               <span className="inline-block animate-bounce" style={{animationDelay: '0.1s'}}> • </span>
@@ -203,78 +258,43 @@ const StreamingAnalytics: React.FC<StreamingAnalyticsProps> = ({
               <div
                 key={insight.id}
                 className={`
-                  border rounded-lg p-4 transition-all duration-500 cursor-pointer hover:shadow-md
+                  p-4 rounded-lg border transition-all duration-300 cursor-pointer
                   ${getInsightColor(insight.type)}
-                  ${animatingInsight === insight.id ? 'scale-105 shadow-lg' : ''}
+                  ${animatingInsight === insight.id ? 'scale-105 shadow-md' : 'hover:shadow-sm'}
                 `}
                 onClick={() => onInsightClick?.(insight)}
               >
                 <div className="flex items-start space-x-3">
-                  <div className="flex-shrink-0 mt-1">
+                  <div className="flex-shrink-0 mt-0.5">
                     {getInsightIcon(insight.type)}
                   </div>
-                  
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center justify-between">
                       <h4 className="text-sm font-medium text-gray-900 truncate">
                         {insight.title}
                       </h4>
-                      <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
-                        {insight.relevance_score && (
-                          <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
-                            {insight.relevance_score}/10
+                      <div className="flex items-center space-x-2 text-xs text-gray-500">
+                        {insight.confidence_score && (
+                          <span className="bg-gray-200 px-2 py-1 rounded">
+                            {(insight.confidence_score * 10).toFixed(0)}% confidence
                           </span>
                         )}
-                        {insight.source_url && (
-                          <a
-                            href={insight.source_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-gray-500 hover:text-gray-700 transition-colors"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <ExternalLink className="w-3 h-3" />
-                          </a>
-                        )}
+                        <span>{new Date(insight.timestamp).toLocaleTimeString()}</span>
                       </div>
                     </div>
-                    
-                    <p className="text-sm text-gray-700 mb-2">
+                    <p className="text-sm text-gray-600 mt-1 line-clamp-2">
                       {insight.content}
                     </p>
-                    
-                    <div className="flex items-center justify-between text-xs text-gray-500">
-                      <span className="capitalize">{insight.type.replace('_', ' ')}</span>
-                      <span>{new Date(insight.timestamp).toLocaleTimeString()}</span>
-                    </div>
-                    
-                    {insight.credibility_score && (
-                      <div className="mt-2">
-                        <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
-                          <span>Source Credibility</span>
-                          <span>{insight.credibility_score}/10</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-1">
-                          <div
-                            className="bg-blue-600 h-1 rounded-full transition-all duration-300"
-                            style={{ width: `${(insight.credibility_score / 10) * 100}%` }}
-                          />
-                        </div>
+                    {insight.source_url && (
+                      <div className="flex items-center mt-2 text-xs text-blue-600">
+                        <ExternalLink className="w-3 h-3 mr-1" />
+                        <span className="truncate">Source available</span>
                       </div>
                     )}
                   </div>
                 </div>
               </div>
             ))}
-          </div>
-        )}
-        
-        {!isRunning && displayedInsights.length > 0 && (
-          <div className="text-center mt-4 pt-4 border-t border-gray-200">
-            <div className="flex items-center justify-center space-x-2 text-sm text-gray-600">
-              <CheckCircle className="w-4 h-4 text-green-600" />
-              <span>Analysis insights from latest scan - {displayedInsights.length} insights discovered</span>
-            </div>
           </div>
         )}
       </div>

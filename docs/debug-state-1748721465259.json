@@ -1,0 +1,16 @@
+{
+  "url": "http://localhost:5173/streaming-test",
+  "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+  "timestamp": "2025-05-31T19:57:45.212Z",
+  "localStorage": {},
+  "sessionStorage": {},
+  "environmentVariables": {
+    "VITE_API_URL": "http://localhost:8001"
+  },
+  "networkStatus": true,
+  "memory": {
+    "used": 16,
+    "total": 18,
+    "limit": 4096
+  }
+}

@@ -27,7 +27,6 @@ export interface CompetitorAnalysisRequest {
   focus_area: string;
   analysis_type?: string;
   client_name?: string;
-  research_enabled?: boolean;
 }
 
 export interface AnalysisStatus {
@@ -47,7 +46,7 @@ export interface BackendAnalysisResult {
     successful_searches: number;
     errors_encountered: number;
   };
-  // New LangGraph format fields
+  // New LangGraph format fields from comprehensive pipeline
   executive_summary?: {
     key_insight: string;
     strategic_recommendations: string[];
@@ -70,6 +69,52 @@ export interface BackendAnalysisResult {
     clinical_gaps_found?: number;
     market_insights_generated?: number;
   };
+  
+  // Comprehensive data fields we're now getting
+  clinical_gaps?: Array<{
+    competitor: string;
+    gap_type: string;
+    description: string;
+    evidence: string;
+    severity: string;
+    source_url?: string;
+  }>;
+  raw_research_results?: Array<{
+    competitor: string;
+    query: string;
+    url: string;
+    title: string;
+    content: string;
+    score: number;
+  }>;
+  final_report?: {
+    analysis_metadata: any;
+    top_opportunities_summary: any[];
+    top_opportunities_detail: any[];
+    top_opportunities_full: any[];
+    brand_opportunities: any[];
+    product_opportunities: any[];
+    pricing_opportunities: any[];
+    market_opportunities: any[];
+    clinical_gaps: any[];
+    market_share_insights: any[];
+    opportunity_matrix: any;
+    executive_summary: any;
+    competitive_landscape: any;
+    overall_source_analysis: any;
+  };
+  
+  // Additional comprehensive fields
+  brand_opportunities?: any[];
+  product_opportunities?: any[];
+  pricing_opportunities?: any[];
+  market_expansion_opportunities?: any[];
+  market_share_insights?: any[];
+  device_category?: string;
+  search_queries?: string[];
+  enhanced_source_metadata?: any[];
+  comprehensive_methodology?: any;
+  methodology_transparency_report?: any;
   // Legacy format fields (for backward compatibility)
   summary?: string;
   market_opportunities?: Array<{
@@ -80,18 +125,38 @@ export interface BackendAnalysisResult {
     evidence: string;
     source_url: string;
   }>;
-  clinical_gaps?: any[];
   brand_positioning?: any;
   competitive_landscape?: any;
-  market_share_insights?: any;
   product_feature_gaps?: any[];
   competitors_analyzed?: string[];
   research_timestamp?: string;
   total_sources_analyzed?: number;
   analysis_summary?: string;
-  raw_clinical_gaps?: any[];
-  raw_market_opportunities?: any[];
-  raw_market_insights?: any[];
+  
+  // NEW: Add the rich backend data fields we're missing
+  raw_clinical_gaps?: Array<{
+    competitor: string;
+    gap_type: string;
+    description: string;
+    evidence: string;
+    severity: string;
+    source_url: string;
+  }>;
+  raw_market_opportunities?: Array<{
+    opportunity_type: string;
+    description: string;
+    market_size_indicator: string;
+    competitive_landscape: string;
+    evidence: string;
+    source_url: string;
+  }>;
+  raw_market_insights?: Array<{
+    insight_type: string;
+    description: string;
+    evidence: string;
+    source_url: string;
+    competitors_affected: string[];
+  }>;
 }
 
 export interface ExecutiveSummary {
@@ -138,6 +203,35 @@ export interface AnalysisResult {
     total_sources: number;
     analysis_duration: string;
   };
+}
+
+// NEW: Create a comprehensive analysis result that preserves ALL backend data
+export interface ComprehensiveAnalysisResult extends AnalysisResult {
+  // Raw detailed data from backend
+  raw_clinical_gaps: Array<{
+    competitor: string;
+    gap_type: string;
+    description: string;
+    evidence: string;
+    severity: string;
+    source_url: string;
+  }>;
+  raw_market_opportunities: Array<{
+    opportunity_type: string;
+    description: string;
+    market_size_indicator: string;
+    competitive_landscape: string;
+    evidence: string;
+    source_url: string;
+  }>;
+  raw_market_insights: Array<{
+    insight_type: string;
+    description: string;
+    evidence: string;
+    source_url: string;
+    competitors_affected?: string[];
+  }>;
+  analysis_summary?: string;
 }
 
 export interface AnalysisListItem {
@@ -462,6 +556,27 @@ const transformBackendToFrontend = (backendData: BackendAnalysisResult, analysis
 export const getAnalysisResult = async (analysisId: string): Promise<AnalysisResult> => {
   const response = await api.get<BackendAnalysisResult>(`/result/${analysisId}`);
   return transformBackendToFrontend(response.data, analysisId);
+};
+
+// NEW: Transform backend data to comprehensive format (preserves all data)
+const transformBackendToComprehensive = (backendData: BackendAnalysisResult, analysisId: string): ComprehensiveAnalysisResult => {
+  // First get the basic analysis result
+  const basicResult = transformBackendToFrontend(backendData, analysisId);
+  
+  // Then add all the rich detailed data
+  return {
+    ...basicResult,
+    raw_clinical_gaps: backendData.raw_clinical_gaps || [],
+    raw_market_opportunities: backendData.raw_market_opportunities || [],
+    raw_market_insights: backendData.raw_market_insights || [],
+    analysis_summary: backendData.analysis_summary
+  };
+};
+
+// NEW: Get comprehensive analysis result with all backend data
+export const getComprehensiveAnalysisResult = async (analysisId: string): Promise<BackendAnalysisResult> => {
+  const response = await api.get(`/result/${analysisId}`);
+  return response.data;
 };
 
 // List all analyses

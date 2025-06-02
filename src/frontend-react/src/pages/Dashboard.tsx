@@ -93,9 +93,12 @@ const Dashboard = () => {
           </div>
         </Link>
 
-        <div className="bg-white rounded-lg shadow-card p-6">
+        <Link
+          to="/focus-areas"
+          className="bg-white rounded-lg shadow-card p-6 hover:shadow-card-hover transition-all duration-300 hover:-translate-y-1 group"
+        >
           <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 gradient-opportunity rounded-lg flex items-center justify-center">
+            <div className="w-12 h-12 gradient-opportunity rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
               <Target className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -103,11 +106,14 @@ const Dashboard = () => {
               <p className="text-sm text-gray-600">Spine, Hip, Knee, Trauma</p>
             </div>
           </div>
-        </div>
+        </Link>
 
-        <div className="bg-white rounded-lg shadow-card p-6">
+        <Link
+          to="/competitors"
+          className="bg-white rounded-lg shadow-card p-6 hover:shadow-card-hover transition-all duration-300 hover:-translate-y-1 group"
+        >
           <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 gradient-strategic rounded-lg flex items-center justify-center">
+            <div className="w-12 h-12 gradient-strategic rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
               <Users className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -115,7 +121,7 @@ const Dashboard = () => {
               <p className="text-sm text-gray-600">Track market leaders</p>
             </div>
           </div>
-        </div>
+        </Link>
       </div>
 
       {/* Recent Analyses */}

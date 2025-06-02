@@ -14,6 +14,14 @@ import { startAnalysis } from '../lib/api';
 import type { CompetitorAnalysisRequest } from '../lib/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 
+// Helper function to generate analysis ID
+const generateAnalysisId = (competitors: string[], focusArea: string): string => {
+  const competitorStr = competitors.slice(0, 3).join('-').toLowerCase().replace(/\s+/g, '-');
+  const focusStr = focusArea.toLowerCase().replace(/\s+/g, '-');
+  const timestamp = Date.now().toString().slice(-6);
+  return `${competitorStr}_${focusStr}_${timestamp}`;
+};
+
 const AnalysisPage = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState<CompetitorAnalysisRequest>({
@@ -21,6 +29,7 @@ const AnalysisPage = () => {
     focus_area: '',
     analysis_type: 'comprehensive',
     client_name: '',
+    research_enabled: true, // Default research to enabled
   });
   const [currentCompetitor, setCurrentCompetitor] = useState('');
 
@@ -81,7 +90,18 @@ const AnalysisPage = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.competitors.length > 0 && formData.focus_area) {
-      startAnalysisMutation.mutate(formData);
+      // Generate analysis ID for streaming
+      const analysisId = generateAnalysisId(formData.competitors, formData.focus_area);
+      
+      // Navigate to results page immediately with the analysis ID and research setting
+      navigate(`/results/${analysisId}`, { 
+        state: { 
+          competitors: formData.competitors, 
+          focusArea: formData.focus_area,
+          researchEnabled: formData.research_enabled,  // Pass research setting
+          startAnalysis: true
+        }
+      });
     }
   };
 
@@ -266,6 +286,43 @@ const AnalysisPage = () => {
                 <option value="quick">Quick Overview</option>
                 <option value="deep-dive">Deep Dive</option>
               </select>
+            </div>
+          </div>
+
+          {/* Research Toggle */}
+          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-medium text-blue-900">
+                  🔬 Research Mode
+                </h3>
+                <p className="text-sm text-blue-700 mt-1">
+                  {formData.research_enabled 
+                    ? 'Enhanced analysis with research-backed insights (recommended)' 
+                    : 'Basic analysis without external research - faster but less comprehensive'}
+                </p>
+              </div>
+              <div className="flex items-center space-x-3">
+                <span className={`text-sm font-medium ${formData.research_enabled ? 'text-blue-600' : 'text-gray-500'}`}>
+                  {formData.research_enabled ? 'ON' : 'OFF'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setFormData((prev: CompetitorAnalysisRequest) => ({ 
+                    ...prev, 
+                    research_enabled: !prev.research_enabled 
+                  }))}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                    formData.research_enabled ? 'bg-blue-600' : 'bg-gray-200'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      formData.research_enabled ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
             </div>
           </div>
         </div>

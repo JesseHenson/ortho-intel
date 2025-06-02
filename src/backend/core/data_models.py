@@ -130,6 +130,9 @@ class GraphState(TypedDict):
     focus_area: str
     device_category: str  # Auto-detected device category
     
+    # Research configuration
+    research_enabled: bool  # Enable/disable external research
+    
     # Research results
     search_queries: List[str]
     raw_research_results: List[Dict[str, Any]]
@@ -173,6 +176,10 @@ class CompetitorAnalysisRequest(BaseModel):
     focus_area: str = Field(
         default="spine_fusion",
         description="Medical device focus area"
+    )
+    research_enabled: bool = Field(
+        default=True,
+        description="Enable enhanced research-backed analysis (recommended)"
     )
 
 class ClinicalGap(BaseModel):

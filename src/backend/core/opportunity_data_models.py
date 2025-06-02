@@ -11,10 +11,10 @@ from enum import Enum
 from datetime import datetime
 
 # Import source models for integration
-from src.backend.core.source_models import (
+from .source_models import (
     SourceCollection, AnalysisMetadata, ProgressiveDisclosureModel, 
     DetailLevel, SourceCitation, SourceAnalysisResult, SourceType,
-    ComprehensiveAnalysisMetadata, LangGraphNodeExecution, AnalysisMethodology,
+    ComprehensiveAnalysisMetadata, LangGraphNodeExecution, AnalysisMetadata,
     TavilySourceMetadata, SourceCollectionAnalyzer
 )
 

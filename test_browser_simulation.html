@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browser Cache Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .error { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .info { background-color: #e2f3ff; border: 1px solid #b8daff; color: #004085; }
+        .event { background-color: #f8f9fa; border-left: 3px solid #007bff; padding: 8px; margin: 5px 0; }
+        button { background-color: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 5px; }
+        button:disabled { background-color: #6c757d; cursor: not-allowed; }
+        #events { max-height: 400px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Browser Cache & Streaming Test</h1>
+    <p>This page tests if the React frontend can properly access cached streaming.</p>
+    
+    <div class="status info">
+        <strong>Test Configuration:</strong><br>
+        Backend URL: <code id="backend-url">http://localhost:8000</code><br>
+        Frontend URL: <code id="frontend-url">http://localhost:5174</code>
+    </div>
+    
+    <div>
+        <button onclick="testCacheAPI()">1. Test Cache API</button>
+        <button onclick="testCachedStreaming()">2. Test Cached Streaming</button>
+        <button onclick="testSyncAPI()">3. Test Sync API</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+    
+    <div id="results"></div>
+    <div id="events"></div>
+
+    <script>
+        const BACKEND_URL = 'http://localhost:8000';
+        let currentEventSource = null;
+        
+        function addResult(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.innerHTML = message;
+            document.getElementById('results').appendChild(div);
+        }
+        
+        function addEvent(message) {
+            const div = document.createElement('div');
+            div.className = 'event';
+            div.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+            document.getElementById('events').appendChild(div);
+            document.getElementById('events').scrollTop = document.getElementById('events').scrollHeight;
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('events').innerHTML = '';
+            if (currentEventSource) {
+                currentEventSource.close();
+                currentEventSource = null;
+            }
+        }
+        
+        async function testCacheAPI() {
+            addResult('🔄 Testing Cache API...', 'info');
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/cache/stats`);
+                if (response.ok) {
+                    const data = await response.json();
+                    addResult(`✅ Cache API Working!<br>
+                              Cache Entries: ${data.total_cache_entries}<br>
+                              Hit Rate: ${data.hit_rate}%<br>
+                              Cost Saved: $${data.estimated_cost_saved}`, 'success');
+                } else {
+                    addResult(`❌ Cache API Failed: ${response.status} ${response.statusText}`, 'error');
+                }
+            } catch (error) {
+                addResult(`❌ Cache API Error: ${error.message}`, 'error');
+            }
+        }
+        
+        function testCachedStreaming() {
+            if (currentEventSource) {
+                currentEventSource.close();
+            }
+            
+            addResult('🔄 Testing Cached Streaming...', 'info');
+            document.getElementById('events').innerHTML = '';
+            
+            const analysisId = 'browser_test_' + Date.now();
+            const competitors = encodeURIComponent('Stryker Spine,Zimmer Biomet');
+            const focusArea = encodeURIComponent('spine_fusion');
+            const url = `${BACKEND_URL}/stream/cached/${analysisId}?competitors=${competitors}&focus_area=${focusArea}`;
+            
+            addEvent(`🔗 Connecting to: ${url}`);
+            
+            currentEventSource = new EventSource(url);
+            let eventCount = 0;
+            let cacheHit = false;
+            let costSaved = 0;
+            
+            currentEventSource.onopen = () => {
+                addEvent('✅ SSE Connection opened');
+            };
+            
+            currentEventSource.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    eventCount++;
+                    
+                    addEvent(`📨 Event #${eventCount}: ${data.type} - ${data.message || 'No message'} (${data.progress || 0}%)`);
+                    
+                    if (data.type === 'cache_hit') {
+                        cacheHit = true;
+                        costSaved = data.cost_saved || 0;
+                        addEvent(`💰 Cache HIT! Saved $${costSaved}`);
+                    }
+                    
+                    if (data.type === 'streaming_complete' || data.type === 'analysis_completed') {
+                        currentEventSource.close();
+                        addResult(`✅ Cached Streaming Completed!<br>
+                                  Events Received: ${eventCount}<br>
+                                  Cache Hit: ${cacheHit ? 'YES' : 'NO'}<br>
+                                  Cost Saved: $${costSaved}`, 'success');
+                    }
+                    
+                } catch (error) {
+                    addEvent(`❌ Failed to parse event: ${error.message}`);
+                    addResult(`❌ Streaming Parse Error: ${error.message}`, 'error');
+                    currentEventSource.close();
+                }
+            };
+            
+            currentEventSource.onerror = (error) => {
+                addEvent(`❌ SSE Error: ${error.message || 'Connection error'}`);
+                addResult(`❌ Streaming Connection Failed`, 'error');
+                currentEventSource.close();
+            };
+            
+            // Timeout after 30 seconds
+            setTimeout(() => {
+                if (currentEventSource && currentEventSource.readyState !== EventSource.CLOSED) {
+                    addEvent('⏰ Test timeout - closing connection');
+                    currentEventSource.close();
+                    addResult('❌ Streaming test timed out', 'error');
+                }
+            }, 30000);
+        }
+        
+        async function testSyncAPI() {
+            addResult('🔄 Testing Sync API...', 'info');
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/analyze-gaps-sync`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        competitors: ['Stryker Spine', 'Zimmer Biomet'],
+                        focus_area: 'spine_fusion'
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    addResult(`✅ Sync API Working!<br>
+                              Data Source: ${data.metadata?.cached ? 'CACHED' : 'FRESH'}<br>
+                              Opportunities: ${data.top_opportunities?.length || 0}<br>
+                              Clinical Gaps: ${data.clinical_gaps?.length || 0}<br>
+                              Processing Time: ${data.metadata?.processing_time?.toFixed(3)}s<br>
+                              Cost Saved: $${data.metadata?.cost_saved || 0}`, 'success');
+                } else {
+                    addResult(`❌ Sync API Failed: ${response.status} ${response.statusText}`, 'error');
+                }
+            } catch (error) {
+                addResult(`❌ Sync API Error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Test CORS and connectivity on load
+        window.onload = () => {
+            addResult('🌐 Browser test loaded. Click buttons to test frontend integration.', 'info');
+        };
+    </script>
+</body>
+</html> 
