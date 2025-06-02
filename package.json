@@ -1,4 +1,10 @@
 {
+  "name": "ortho-intel-backend",
+  "version": "0.1.0",
+  "description": "Backend for Ortho-Intel project",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "dependencies": {
     "eventsource": "^4.0.0"
   }
