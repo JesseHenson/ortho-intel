@@ -26,7 +26,6 @@ The current orthopedic competitive intelligence platform is successfully deploye
 - **LangGraph Pipeline**: 5-node analysis workflow (detect_category → initialize → research → analyze → synthesize)
 - **Search Templates**: Spine-specific query generation
 - **Data Models**: Basic ClinicalGap and MarketOpportunity structures
-- **Streamlit Frontend**: Authentication and results display
 - **API Integration**: Tavily search and OpenAI analysis
 
 ### Current Limitations ❌

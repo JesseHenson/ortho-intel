@@ -16,14 +16,6 @@
 **Test Data**: Stryker Spine, Zimmer Biomet, Orthofix
 **Result**: ✅ Found real competitive gaps (Zimmer FDA recalls)
 
-## Decision: Streamlit Cloud for Initial Demo
-**Date**: 2025-05-25  
-**Context**: Need to get demo to marketing firm quickly
-**Decision**: Deploy to Streamlit Cloud with password protection
-**Rationale**: Fastest deployment, professional URL, good enough for initial demo
-**Alternative**: Railway (for production later)
-**Result**: 🔄 In progress
-
 ## Decision: Evidence-Based Analysis
 **Date**: 2025-05-25
 **Context**: Marketing firms need credible, actionable insights  
