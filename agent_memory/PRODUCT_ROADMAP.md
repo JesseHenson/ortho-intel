@@ -179,7 +179,7 @@ class ClinicalEvidenceEngine:
 
 ### Current MVP Architecture:
 ```
-Streamlit UI → FastAPI → LangGraph (4 nodes) → Single Analysis Report
+FastAPI → LangGraph (4 nodes) → Single Analysis Report
 ```
 
 ### Target Product Architecture:

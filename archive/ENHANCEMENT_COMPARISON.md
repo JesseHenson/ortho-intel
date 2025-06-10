@@ -70,7 +70,6 @@
 #### 📁 Files Created/Modified
 
 **New Files:**
-- `streamlit_app_opportunity_enhanced.py` - Enhanced frontend
 - `main_langgraph_opportunity_enhanced.py` - Enhanced backend
 - `test_enhanced_frontend.py` - Comprehensive test suite
 - `demo_enhanced_features.py` - Feature demonstration
