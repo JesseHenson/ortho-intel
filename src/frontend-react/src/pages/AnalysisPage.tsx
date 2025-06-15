@@ -14,12 +14,16 @@ import { startAnalysis } from '../lib/api';
 import type { CompetitorAnalysisRequest } from '../lib/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 
+// Must match backend COMPETITOR_SEPARATOR and FA_SEPARATOR
+const COMPETITOR_SEPARATOR = '|||';
+const FA_SEPARATOR = '__FA__';
+
 // Helper function to generate analysis ID
 const generateAnalysisId = (competitors: string[], focusArea: string): string => {
-  const competitorStr = competitors.slice(0, 3).join('-').toLowerCase().replace(/\s+/g, '-');
+  const competitorStr = competitors.map(c => c.replace(/\s+/g, '_')).join(COMPETITOR_SEPARATOR).toLowerCase();
   const focusStr = focusArea.toLowerCase().replace(/\s+/g, '-');
   const timestamp = Date.now().toString().slice(-6);
-  return `${competitorStr}_${focusStr}_${timestamp}`;
+  return `${competitorStr}${FA_SEPARATOR}${focusStr}_${timestamp}`;
 };
 
 const AnalysisPage = () => {

@@ -17,6 +17,7 @@ from datetime import datetime
 import json
 import time
 import requests
+import re
 
 from ..core.data_models import CompetitorAnalysisRequest, CompetitorAnalysisResponse
 from ..pipelines.main_langgraph_opportunity import opportunity_graph
@@ -1611,14 +1612,26 @@ async def simple_stream_test(analysis_id: str):
         }
     )
 
+def parse_analysis_id(analysis_id: str):
+    FA_SEPARATOR = '__FA__'
+    COMPETITOR_SEPARATOR = '|||'
+    if FA_SEPARATOR not in analysis_id:
+        return [], ''
+    competitor_part, rest = analysis_id.split(FA_SEPARATOR, 1)
+    import re
+    focus_area = re.sub(r'[-_][0-9]{6}$', '', rest).replace('_', ' ')
+    competitors = [c.replace('_', ' ').title() for c in competitor_part.split(COMPETITOR_SEPARATOR)]
+    return competitors, focus_area.strip()
+
 @app.get("/stream/langgraph/{analysis_id}")
 async def stream_langgraph_analysis(analysis_id: str, research: bool = Query(True, description="Enable enhanced research-backed analysis")):
-    """Stream analysis using LangGraph's native astream method with optional research"""
-    
-    # Log incoming streaming request
     logger.info(f"🎥 Streaming request received:")
     logger.info(f"   Analysis ID: {analysis_id}")
     logger.info(f"   Research enabled: {research}")
+
+    competitors, focus_area = parse_analysis_id(analysis_id)
+    logger.info(f"   Parsed competitors: {competitors}")
+    logger.info(f"   Parsed focus_area: {focus_area}")
     
     async def langgraph_event_generator():
         final_state = None
@@ -1633,23 +1646,6 @@ async def stream_langgraph_analysis(analysis_id: str, research: bool = Query(Tru
             }
             logger.info(f"📡 Streaming connection established for {analysis_id} (research: {research})")
             yield f"data: {json.dumps(connection_event)}\n\n"
-            
-            # Parse competitors and focus_area from analysis_id or use defaults for testing
-            # In production, you'd get these from request or database
-            competitors = ["Stryker Spine", "Zimmer Biomet"]
-            focus_area = "spine_fusion"
-            
-            # Send analysis started event
-            started_event = {
-                'type': 'analysis_started',
-                'message': f'Starting competitive analysis for {", ".join(competitors)} (research: {"enabled" if research else "disabled"})',
-                'competitors': competitors,
-                'focus_area': focus_area,
-                'research_enabled': research,
-                'timestamp': datetime.now().isoformat(),
-                'progress': 0
-            }
-            yield f"data: {json.dumps(started_event)}\n\n"
             
             # Initialize the graph state with research flag
             initial_state = {
