@@ -189,6 +189,22 @@ const ResultsPage = () => {
     });
   }, [streamingIsRunning, streamingProgress, events, showStreamingView, result, resultLoading, analysisId, hasStreamingCompleted, analysisParams, resultError]);
 
+  // Defensive extraction for competitor/source counts
+  let competitorsAnalyzed: string[] = [];
+  let competitorCount = 0;
+  let totalSources = 0;
+  if (result && result.metadata) {
+    competitorsAnalyzed = Array.isArray(result.metadata.competitors_analyzed)
+      ? result.metadata.competitors_analyzed
+      : typeof result.metadata.competitors_analyzed === 'number'
+        ? Array(result.metadata.competitors_analyzed).fill('Competitor')
+        : [];
+    competitorCount = competitorsAnalyzed.length;
+    totalSources = typeof result.metadata.total_sources === 'number'
+      ? result.metadata.total_sources
+      : 0;
+  }
+
   // Show streaming state while analysis is running
   if (showStreamingView) {
     return (
@@ -400,11 +416,11 @@ const ResultsPage = () => {
                       <p className="text-sm text-blue-800">Opportunities</p>
                     </div>
                     <div className="text-center p-3 bg-purple-50 rounded-lg">
-                      <p className="text-2xl font-bold text-purple-600">{result.metadata?.total_sources || 0}</p>
+                      <p className="text-2xl font-bold text-purple-600">{totalSources}</p>
                       <p className="text-sm text-purple-800">Sources</p>
                     </div>
                     <div className="text-center p-3 bg-green-50 rounded-lg">
-                      <p className="text-2xl font-bold text-green-600">{result.metadata?.competitors_analyzed?.length || 0}</p>
+                      <p className="text-2xl font-bold text-green-600">{competitorCount}</p>
                       <p className="text-sm text-green-800">Competitors</p>
                     </div>
                   </div>
@@ -506,11 +522,11 @@ const ResultsPage = () => {
                       <dl className="space-y-1 text-sm">
                         <div className="flex justify-between">
                           <dt className="text-gray-600">Total Sources:</dt>
-                          <dd className="font-medium">{result.metadata?.total_sources || 0}</dd>
+                          <dd className="font-medium">{totalSources}</dd>
                         </div>
                         <div className="flex justify-between">
                           <dt className="text-gray-600">Competitors Analyzed:</dt>
-                          <dd className="font-medium">{result.metadata?.competitors_analyzed?.length || 0}</dd>
+                          <dd className="font-medium">{competitorCount}</dd>
                         </div>
                         <div className="flex justify-between">
                           <dt className="text-gray-600">Analysis Duration:</dt>

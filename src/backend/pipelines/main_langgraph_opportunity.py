@@ -531,23 +531,32 @@ class OpportunityIntelligenceGraph:
         
         # Combine all opportunities
         all_strategic_opportunities = clinical_opportunities + market_opportunities + ai_opportunities
-        
+
+        # Deduplicate opportunities by (title, description)
+        seen = set()
+        unique_opportunities = []
+        for opp in all_strategic_opportunities:
+            key = (opp.title.strip().lower(), opp.description.strip().lower())
+            if key not in seen:
+                seen.add(key)
+                unique_opportunities.append(opp)
+
         # Rank opportunities by composite score
-        ranked_opportunities = OpportunityRanker.rank_opportunities(all_strategic_opportunities)
-        
+        ranked_opportunities = OpportunityRanker.rank_opportunities(unique_opportunities)
+
         # Take top opportunities for detailed analysis
         top_opportunities = ranked_opportunities[:5]
-        
-        print(f"   Generated {len(all_strategic_opportunities)} strategic opportunities")
+
+        print(f"   Generated {len(unique_opportunities)} unique strategic opportunities")
         print(f"   Top 5 opportunities selected for detailed analysis")
-        
+
         # Create opportunity source links for traceability
         opportunity_source_links = self._create_opportunity_source_links(
             top_opportunities, enhanced_metadata
         )
-        
+
         state.update({
-            "strategic_opportunities": [opp.model_dump() for opp in all_strategic_opportunities],
+            "strategic_opportunities": [opp.model_dump() for opp in unique_opportunities],
             "top_opportunities": [opp.model_dump() for opp in top_opportunities],
             "brand_opportunities": brand_opportunities,
             "product_opportunities": product_opportunities,
@@ -1144,13 +1153,16 @@ class OpportunityIntelligenceGraph:
         confidence_score = comprehensive_methodology_data.get("overall_confidence", 8.0)
         
         # Build result in expected format with comprehensive data
+        raw_research_results = final_state.get("raw_research_results", [])
+        competitors_analyzed = list({r.get("competitor") for r in raw_research_results if r.get("competitor")}) or competitors
+        total_sources = len({r.get("url") for r in raw_research_results if r.get("url")})
         result = {
             "executive_summary": executive_summary,
             "top_opportunities": formatted_opportunities,
             "confidence_score": confidence_score,
             "metadata": {
-                "total_sources": comprehensive_methodology_data.get("total_sources_analyzed", 0),
-                "competitors_analyzed": len(competitors),
+                "total_sources": total_sources,
+                "competitors_analyzed": competitors_analyzed,
                 "analysis_duration": comprehensive_methodology_data.get("total_processing_time", "Real-time"),
                 "timestamp": final_report.get("research_timestamp", "2025-05-25"), # Can eventually get from comprehensive_methodology_data
                 "clinical_gaps_found": len(clinical_gaps),
